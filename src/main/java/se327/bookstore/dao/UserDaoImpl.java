@@ -40,6 +40,11 @@ public class UserDaoImpl implements UserDao {
     }
 
     @Override
+    public Optional<User> findByEmailForUpdate(String email) {
+        return userRepository.findByEmailForUpdate(email.strip());
+    }
+
+    @Override
     public boolean existsByEmailAndIdNot(String email, Long id) {
         if (email == null || email.isBlank() || id == null) {
             return false;

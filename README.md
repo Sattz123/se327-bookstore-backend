@@ -1,5 +1,27 @@
 # Bookstore backend
 
+## Address book (Stage 9)
+
+Authenticated users manage their own delivery addresses through the existing lab-style layers. Flyway `V7__create_addresses.sql` adds `addresses` with an owner foreign key and a PostgreSQL partial unique index allowing at most one default per user.
+
+| Request | Result |
+| --- | --- |
+| `GET /api/addresses` | Current user's addresses, default first then newest |
+| `POST /api/addresses` | Create an address (201) |
+| `PUT /api/addresses/{id}` | Edit an owned address |
+| `PUT /api/addresses/{id}/default` | Select an owned address as default |
+| `DELETE /api/addresses/{id}` | Delete an owned address (204) |
+
+JSON fields are `label` (required, max 50), `fullName` (required, max 200), `addressLine` (required, max 500), optional `phone` (20), `city` (100), `province` (100), `postalCode` (10), and `isDefault` (boolean, false when omitted). Text is trimmed; blank optional fields become null. Responses also include `id`, `createdAt`, and `updatedAt`, with no owner or password data. The original label/province fields are retained; no location is silently filled in.
+
+The owner always comes from the authenticated principal. Missing or another user's IDs return 404; invalid IDs/body fields return 400; guests receive 401. Mutations lock the owning user row and run in one transaction, so concurrent default changes are serialized. The unique index also protects the rule at the database level. Ownership is checked before clearing an old default. Deleting a default address, or editing it with `isDefault: false`, leaves no default until the user chooses one; other addresses are not automatically promoted. Selecting the same default repeatedly is safe.
+
+`AddressControllerTests` exercises the authenticated API with JWT and PostgreSQL in a separate `address_api_test` schema; fixtures roll back. Existing local startup instructions still apply, and the next application startup applies V7 automatically.
+
+Stage 9 regression tests cover required/overlong fields, invalid IDs, empty and private lists, cross-user edit/delete/default attempts, switching/repeating/clearing defaults, and deleting default/non-default addresses. `AddressPersistenceTests` checks the PostgreSQL partial unique index and user-deletion cascade in its own schema. `AddressConcurrencyTests` runs two real transactions simultaneously and verifies both default changes succeed with exactly one final default; it removes its committed test user afterward.
+
+Spring method validation (used when a route also validates its path ID) now returns the same `errors: [{field, message}]` shape as request-body validation. This keeps create and edit form error messages consistent.
+
 Spring Boot backend for the bookstore reimplementation. Requires JDK 21 and Docker Desktop with Linux containers. Maven is provided by the wrapper.
 
 ## Local setup

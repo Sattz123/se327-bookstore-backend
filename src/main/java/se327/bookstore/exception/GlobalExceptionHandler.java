@@ -11,9 +11,35 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.validation.method.ParameterErrors;
+
+import java.util.ArrayList;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+
+    @Override
+    protected ResponseEntity<Object> handleHandlerMethodValidationException(
+            HandlerMethodValidationException ex, HttpHeaders headers,
+            HttpStatusCode status, WebRequest request) {
+        if (ex.isForReturnValue()) {
+            return super.handleHandlerMethodValidationException(ex, headers, status, request);
+        }
+        var errors = new ArrayList<FieldError>();
+        for (var result : ex.getParameterValidationResults()) {
+            if (result instanceof ParameterErrors parameterErrors) {
+                parameterErrors.getFieldErrors().forEach(error ->
+                        errors.add(new FieldError(error.getField(), error.getDefaultMessage())));
+            } else {
+                result.getResolvableErrors().forEach(error -> errors.add(new FieldError(
+                        result.getMethodParameter().getParameterName(), error.getDefaultMessage())));
+            }
+        }
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, "Please correct the invalid fields.");
+        problem.setProperty("errors", errors);
+        return handleExceptionInternal(ex, problem, headers, status, request);
+    }
 
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
