@@ -327,3 +327,13 @@ Stop the backend using IntelliJ's Stop button or Ctrl+C in its terminal. Stop Po
 ```powershell
 docker compose stop
 ```
+
+## Administrator dashboard (Stage 19)
+
+`GET /api/admin/dashboard?page=1` is ADMIN-only. It returns totalProducts, totalOrders,
+totalCustomers, recentOrders (10 per page), page, size and totalPages. As in the original,
+books include hidden/archived products, orders include every status including CANCELLED,
+and customer counts exclude administrators. These are record counts, not paid revenue.
+Recent orders use saved order totals and current customer names, newest first with ID as
+a tie-breaker. Counts and rows use one repeatable-read snapshot; an empty store returns
+zero counts and an empty list. No schema migration is required.

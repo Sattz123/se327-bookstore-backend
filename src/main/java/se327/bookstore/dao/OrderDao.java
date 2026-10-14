@@ -6,6 +6,7 @@ import java.util.UUID;
 import java.util.List;
 
 public interface OrderDao {
+    se327.bookstore.repository.DashboardTotalsView dashboardTotals();
     List<PurchaseOrder> findByUserId(Long userId);
     Optional<PurchaseOrder> findByUserIdAndCheckoutKey(Long userId, UUID key);
     Optional<PurchaseOrder> findByIdAndUserId(Long id, Long userId);

@@ -11,6 +11,7 @@ import java.util.List;
 @Repository @RequiredArgsConstructor
 public class OrderDaoImpl implements OrderDao {
     private final OrderRepository repository;
+    public se327.bookstore.repository.DashboardTotalsView dashboardTotals() { return repository.dashboardTotals(); }
     public List<PurchaseOrder> findByUserId(Long userId) { return repository.findByUserIdOrderByCreatedAtDescIdDesc(userId); }
     public Optional<PurchaseOrder> findByUserIdAndCheckoutKey(Long userId, UUID key) { return repository.findByUserIdAndCheckoutKey(userId, key); }
     public Optional<PurchaseOrder> findByIdAndUserId(Long id, Long userId) { return repository.findByIdAndUserId(id, userId); }
