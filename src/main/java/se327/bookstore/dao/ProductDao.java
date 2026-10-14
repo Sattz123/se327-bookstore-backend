@@ -10,4 +10,6 @@ public interface ProductDao {
     Page<Product> findVisibleProducts(String query, Long categoryId, Pageable pageable);
 
     Optional<Product> findVisibleProductById(Long id);
+
+    Optional<Product> findByIdForUpdate(Long id);
 }

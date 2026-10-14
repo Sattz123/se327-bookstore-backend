@@ -266,6 +266,14 @@ Migration V10 adds `orders` and `order_items`. Order lines preserve the purchase
 
 Cash on delivery uses `PENDING`; simulated card completion uses `COMPLETED`. No real payment is processed. A unique checkout UUID per customer prevents duplicate order records.
 
+## Transactional checkout (Stage 12)
+
+`GET /api/checkout/review` returns `{ cart, cartFingerprint }` with current server prices. `POST /api/checkout` accepts `addressId`, `paymentType` (`CASH_ON_DELIVERY` or `SIMULATED_CARD`), optional `paymentMethodId` (required for card, absent for cash), a UUID `checkoutKey`, and the review's `cartFingerprint`. The result is an order snapshot (201). `GET /api/checkout/orders/{id}` reloads an owner's confirmation (foreign/missing orders return 404).
+
+The server verifies address/card ownership and expiry, locks the customer and products, checks shared stock across formats, compares the reviewed cart and prices, and computes totals using `BigDecimal`. Changed carts/prices, unavailable selections, empty carts and insufficient stock return 409 without purchasing. Product locks are acquired in ascending ID order. Order creation, stock deduction and cart deletion share one database transaction; failures roll everything back.
+
+Retry the **same payload with the same checkout key** after a lost response: it returns the original order, even after the cart is cleared. Reusing a successful key for changed details returns 409. Keys are scoped to the customer; a new purchase needs a new key and review. Cash orders are `PENDING`; simulated card orders are `COMPLETED`. Both consume stock and clear the cart. The simulated card path only uses saved masked display metadata and never contacts a payment gateway.
+
 ## Stop local services
 
 Stop the backend using IntelliJ's Stop button or Ctrl+C in its terminal. Stop PostgreSQL without deleting its stored data:
