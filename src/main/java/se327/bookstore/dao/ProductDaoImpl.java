@@ -43,4 +43,9 @@ public class ProductDaoImpl implements ProductDao {
     public Optional<Product> findVisibleProductById(Long id) {
         return productRepository.findByIdAndVisibleTrueAndCategoryVisibleTrue(id);
     }
+
+    @Override
+    public Optional<Product> findByIdForUpdate(Long id) {
+        return productRepository.findByIdForUpdate(id);
+    }
 }
