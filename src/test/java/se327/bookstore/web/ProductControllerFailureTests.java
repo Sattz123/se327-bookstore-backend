@@ -24,7 +24,7 @@ class ProductControllerFailureTests {
 
     @Test
     void returnsASafeErrorWhenTheCatalogFails() throws Exception {
-        when(productService.getProducts()).thenThrow(new IllegalStateException("Private database information"));
+        when(productService.getProducts("", null, 1)).thenThrow(new IllegalStateException("Private database information"));
 
         mvc.perform(get("/api/products"))
                 .andExpect(status().isInternalServerError())

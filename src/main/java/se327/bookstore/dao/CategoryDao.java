@@ -1,0 +1,12 @@
+package se327.bookstore.dao;
+
+import se327.bookstore.entity.Category;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface CategoryDao {
+    List<Category> findVisibleCategories();
+
+    Optional<Category> findVisibleCategoryById(Long id);
+}
