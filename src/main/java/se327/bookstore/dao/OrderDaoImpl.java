@@ -27,7 +27,11 @@ public class OrderDaoImpl implements OrderDao {
                 var matches = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
                 matches.add(cb.like(cb.lower(root.get("user").get("username")), pattern, '\\'));
                 matches.add(cb.like(cb.lower(root.get("user").get("email")), pattern, '\\'));
-                try { matches.add(cb.equal(root.get("id"), Long.parseLong(query))); } catch (NumberFormatException ignored) { }
+                try {
+                    matches.add(cb.equal(root.get("id"), Long.parseLong(query)));
+                } catch (NumberFormatException ignored) {
+                    /* Non-numeric search query is not an order ID. */
+                }
                 predicates.add(cb.or(matches.toArray(jakarta.persistence.criteria.Predicate[]::new)));
             }
             return cb.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));

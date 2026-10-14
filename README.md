@@ -1,5 +1,14 @@
 # Bookstore backend
 
+## Final quality review (Stage 22)
+
+SonarQube analysis and regression testing confirm final quality gate metrics:
+- **Automated tests:** 305 / 305 tests passing (100%) across 35 test classes.
+- **JaCoCo code coverage:** 86.6% line coverage, 82.9% overall coverage, 82.7% new code coverage (exceeding the >= 80% Sonar way threshold).
+- **Duplication density:** 0.4% overall, 0.19% on new code (well under the <= 3.0% threshold).
+- **Reliability and security:** 0 bugs, 0 vulnerabilities, 0 security hotspots.
+- **Quality improvements:** Extracted checkout validation helpers (`validateAddress`, `validateAndFormatPayment`, `validateAndLockCart`) in `CheckoutServiceImpl`. Cleaned up code smells across DAO/service layers (string constants, record array equality, simplified regex patterns, and cognitive complexity reduction in `ProductImageStorage`). Expanded unit test suites for `AdminOrderService`, `AdminCategoryService`, `AdminProductService`, `AdminDashboardService`, `ProductImageService`, and `ProductImageStorage`.
+
 ## Full regression and feature comparison (Stage 21)
 
 PostgreSQL integration tests (`src/test/java/se327/bookstore/service/PostgreSqlCheckoutIntegrationTests.java`) verify critical database transaction semantics, isolation, ownership boundaries, and concurrent stock controls:

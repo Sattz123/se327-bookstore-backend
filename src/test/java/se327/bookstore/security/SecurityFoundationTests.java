@@ -51,8 +51,9 @@ class SecurityFoundationTests {
         String hash1 = passwordEncoder.encode(rawPassword);
         String hash2 = passwordEncoder.encode(rawPassword);
 
-        assertThat(hash1).isNotEqualTo(rawPassword);
-        assertThat(hash1).isNotEqualTo(hash2); // Salt ensures distinct hashes
+        assertThat(hash1)
+                .isNotEqualTo(rawPassword)
+                .isNotEqualTo(hash2); // Salt ensures distinct hashes
         assertThat(passwordEncoder.matches(rawPassword, hash1)).isTrue();
         assertThat(passwordEncoder.matches(rawPassword, hash2)).isTrue();
         assertThat(passwordEncoder.matches("WrongPassword", hash1)).isFalse();

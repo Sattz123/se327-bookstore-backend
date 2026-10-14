@@ -32,43 +32,80 @@ public class ProductImageStorage {
         return location.endsWith("/") ? location : location + "/";
     }
 
+    private record DecodedImage(byte[] data, String extension) {
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof DecodedImage(byte[] otherData, String otherExt))) return false;
+            return java.util.Arrays.equals(data, otherData) && java.util.Objects.equals(extension, otherExt);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * java.util.Arrays.hashCode(data) + java.util.Objects.hashCode(extension);
+        }
+
+        @Override
+        public String toString() {
+            return "DecodedImage[extension=" + extension + ", size=" + (data != null ? data.length : 0) + "]";
+        }
+    }
+
     public String store(MultipartFile file) {
         if (file.isEmpty() || file.getSize() > MAX_BYTES) throw invalid("Choose a PNG or JPEG image no larger than 5 MB.");
+        DecodedImage decoded;
+        try {
+            decoded = decodeAndValidate(file);
+        } catch (IOException ex) {
+            throw invalid("The image could not be decoded. Choose a valid PNG or JPEG.");
+        }
         Path target = null;
-        boolean validated = false;
+        try {
+            Files.createDirectories(directory);
+            String filename = UUID.randomUUID() + "." + decoded.extension();
+            target = directory.resolve(filename);
+            Files.write(target, decoded.data(), StandardOpenOption.CREATE_NEW);
+            return URL_PREFIX + filename;
+        } catch (IOException ex) {
+            if (target != null) deleteFile(target);
+            throw new IllegalStateException("Unable to store product image.", ex);
+        }
+    }
+
+    private DecodedImage decodeAndValidate(MultipartFile file) throws IOException {
         try (var input = new MemoryCacheImageInputStream(new ByteArrayInputStream(file.getBytes()))) {
             var readers = ImageIO.getImageReaders(input);
             if (!readers.hasNext()) throw invalid("The file is not a readable PNG or JPEG image.");
             ImageReader reader = readers.next();
-            byte[] normalized;
-            String extension;
             try {
                 String format = reader.getFormatName().toLowerCase(Locale.ROOT);
-                if (!format.equals("png") && !format.equals("jpeg") && !format.equals("jpg")) throw invalid("Only PNG and JPEG images are supported.");
-                extension = format.equals("png") ? "png" : "jpg";
+                if (!format.equals("png") && !format.equals("jpeg") && !format.equals("jpg")) {
+                    throw invalid("Only PNG and JPEG images are supported.");
+                }
+                String extension = format.equals("png") ? "png" : "jpg";
                 String expectedType = extension.equals("png") ? "image/png" : "image/jpeg";
-                if (!expectedType.equalsIgnoreCase(file.getContentType())) throw invalid("The image contents must match its PNG or JPEG content type.");
+                if (!expectedType.equalsIgnoreCase(file.getContentType())) {
+                    throw invalid("The image contents must match its PNG or JPEG content type.");
+                }
                 reader.setInput(input, true, true);
-                int width = reader.getWidth(0), height = reader.getHeight(0);
-                if (width < 1 || height < 1 || width > 4096 || height > 4096 || (long) width * height > 16777216)
+                int width = reader.getWidth(0);
+                int height = reader.getHeight(0);
+                if (width < 1 || height < 1 || width > 4096 || height > 4096 || (long) width * height > 16777216) {
                     throw invalid("Images must be between 1 and 4096 pixels in each dimension.");
+                }
                 var image = reader.read(0);
+                byte[] normalized;
                 try (var output = new ByteArrayOutputStream()) {
                     if (image == null || !ImageIO.write(image, extension, output)) throw invalid("Unable to read this image.");
                     normalized = output.toByteArray();
-                } finally { if (image != null) image.flush(); }
-            } finally { reader.dispose(); }
-            if (normalized.length > MAX_BYTES) throw invalid("The normalized image exceeds 5 MB. Choose a smaller image.");
-            validated = true;
-            Files.createDirectories(directory);
-            String filename = UUID.randomUUID() + "." + extension;
-            target = directory.resolve(filename);
-            Files.write(target, normalized, StandardOpenOption.CREATE_NEW);
-            return URL_PREFIX + filename;
-        } catch (IOException ex) {
-            if (target != null) deleteFile(target);
-            if (!validated) throw invalid("The image could not be decoded. Choose a valid PNG or JPEG.");
-            throw new IllegalStateException("Unable to store product image.", ex);
+                } finally {
+                    if (image != null) image.flush();
+                }
+                if (normalized.length > MAX_BYTES) throw invalid("The normalized image exceeds 5 MB. Choose a smaller image.");
+                return new DecodedImage(normalized, extension);
+            } finally {
+                reader.dispose();
+            }
         }
     }
 

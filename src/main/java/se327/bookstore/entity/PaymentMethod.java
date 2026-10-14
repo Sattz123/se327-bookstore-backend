@@ -23,7 +23,7 @@ public class PaymentMethod {
     @NotBlank @Size(max = 100) @Column(name = "cardholder_name", nullable = false, length = 100)
     private String cardholderName;
 
-    @NotNull @Pattern(regexp = "[0-9]{4}") @Column(name = "last_four", nullable = false, length = 4)
+    @NotNull @Pattern(regexp = "\\d{4}") @Column(name = "last_four", nullable = false, length = 4)
     private String lastFour;
 
     @Min(1) @Max(12) @Column(name = "expiry_month", nullable = false)

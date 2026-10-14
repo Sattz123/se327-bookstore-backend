@@ -11,10 +11,13 @@ import se327.bookstore.entity.User;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.Date;
 
 @Service
 public class JwtTokenService {
+
+    public static final String CLAIM_USER_ID = "userId";
+    public static final String CLAIM_ROLE = "role";
+    public static final String CLAIM_USERNAME = "username";
 
     private final String secret;
     private final long expirationMs;
@@ -31,11 +34,11 @@ public class JwtTokenService {
         Instant expiry = now.plusMillis(expirationMs);
         return Jwts.builder()
                 .subject(user.getEmail())
-                .claim("userId", user.getId())
-                .claim("role", user.getRole().name())
-                .claim("username", user.getUsername())
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(expiry))
+                .claim(CLAIM_USER_ID, user.getId())
+                .claim(CLAIM_ROLE, user.getRole().name())
+                .claim(CLAIM_USERNAME, user.getUsername())
+                .claim("iat", now.getEpochSecond())
+                .claim("exp", expiry.getEpochSecond())
                 .signWith(getSigningKey())
                 .compact();
     }
@@ -45,11 +48,11 @@ public class JwtTokenService {
         Instant expiry = now.plusMillis(expirationMs);
         return Jwts.builder()
                 .subject(userDetails.getEmail())
-                .claim("userId", userDetails.getId())
-                .claim("role", userDetails.getRole().name())
-                .claim("username", userDetails.getDisplayName())
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(expiry))
+                .claim(CLAIM_USER_ID, userDetails.getId())
+                .claim(CLAIM_ROLE, userDetails.getRole().name())
+                .claim(CLAIM_USERNAME, userDetails.getDisplayName())
+                .claim("iat", now.getEpochSecond())
+                .claim("exp", expiry.getEpochSecond())
                 .signWith(getSigningKey())
                 .compact();
     }
@@ -59,7 +62,7 @@ public class JwtTokenService {
     }
 
     public Long extractUserId(String token) {
-        Object id = getClaims(token).get("userId");
+        Object id = getClaims(token).get(CLAIM_USER_ID);
         if (id instanceof Number number) {
             return number.longValue();
         }
@@ -67,14 +70,18 @@ public class JwtTokenService {
     }
 
     public String extractRole(String token) {
-        Object role = getClaims(token).get("role");
+        Object role = getClaims(token).get(CLAIM_ROLE);
         return role != null ? role.toString() : null;
     }
 
     public boolean validateToken(String token) {
         try {
             Claims claims = getClaims(token);
-            return claims.getExpiration().after(new Date());
+            Object expiration = claims.get("exp");
+            if (expiration instanceof Number number) {
+                return Instant.ofEpochSecond(number.longValue()).isAfter(Instant.now());
+            }
+            return false;
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }

@@ -44,10 +44,42 @@ public class CheckoutServiceImpl implements CheckoutService {
                 throw conflict("This checkout key was already used for a different request.");
             return toDto(previous.get());
         }
-        Address address = addressDao.findByIdAndUserId(request.addressId(), user.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Address not found."));
-        String paymentDisplay = paymentDisplay(user, request);
+        Address address = validateAddress(user, request.addressId());
+        String paymentDisplay = validateAndFormatPayment(user, request);
         List<CartItem> entries = cartDao.findByUserId(user.getId());
+        ValidatedCart validatedCart = validateAndLockCart(entries, request.cartFingerprint());
+
+        PurchaseOrder order = PurchaseOrder.builder().user(user).checkoutKey(request.checkoutKey()).requestHash(requestHash)
+                .status(request.paymentType() == PaymentType.CASH_ON_DELIVERY ? OrderStatus.PENDING : OrderStatus.COMPLETED)
+                .paymentType(request.paymentType()).paymentDisplay(paymentDisplay).recipientName(address.getFullName())
+                .shippingPhone(address.getPhone()).shippingAddress(shippingAddress(address))
+                .total(validatedCart.items().stream().map(CartItemDto::lineTotal).reduce(new BigDecimal("0.00"), BigDecimal::add)).build();
+        for (CartItemDto item : validatedCart.items()) {
+            order.getItems().add(OrderItem.builder().order(order).productId(item.productId()).title(item.name()).format(item.format())
+                    .quantity(item.quantity()).unitPrice(item.unitPrice()).lineTotal(item.lineTotal()).build());
+        }
+        for (var entry : validatedCart.quantities().entrySet()) {
+            Product p = validatedCart.locked().get(entry.getKey());
+            p.setStockQuantity(p.getStockQuantity() - Math.toIntExact(entry.getValue()));
+        }
+        PurchaseOrder saved = orderDao.save(order);
+        entries.forEach(cartDao::delete);
+        return toDto(saved);
+    }
+
+    @Override @Transactional(readOnly = true)
+    public OrderDto confirmation(String email, Long orderId) {
+        User user = userDao.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found."));
+        return toDto(orderDao.findByIdAndUserId(orderId, user.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found.")));
+    }
+
+    private Address validateAddress(User user, Long addressId) {
+        return addressDao.findByIdAndUserId(addressId, user.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Address not found."));
+    }
+
+    private ValidatedCart validateAndLockCart(List<CartItem> entries, String expectedFingerprint) {
         if (entries.isEmpty()) throw conflict("Your cart is empty.");
 
         // Every checkout locks products in the same order, including purchases by different users.
@@ -67,35 +99,15 @@ public class CheckoutServiceImpl implements CheckoutService {
             current.add(new CartItemDto(item.getId(), p.getId(), p.getName(), null, item.getFormat(), item.getQuantity(),
                     p.getPrice(), p.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())), p.getStockQuantity(), true));
         }
-        if (!fingerprint(current).equals(request.cartFingerprint()))
+        if (!fingerprint(current).equals(expectedFingerprint))
             throw conflict("Your cart or its prices changed. Refresh the review before placing the order.");
 
-        PurchaseOrder order = PurchaseOrder.builder().user(user).checkoutKey(request.checkoutKey()).requestHash(requestHash)
-                .status(request.paymentType() == PaymentType.CASH_ON_DELIVERY ? OrderStatus.PENDING : OrderStatus.COMPLETED)
-                .paymentType(request.paymentType()).paymentDisplay(paymentDisplay).recipientName(address.getFullName())
-                .shippingPhone(address.getPhone()).shippingAddress(shippingAddress(address))
-                .total(current.stream().map(CartItemDto::lineTotal).reduce(new BigDecimal("0.00"), BigDecimal::add)).build();
-        for (CartItemDto item : current) {
-            order.getItems().add(OrderItem.builder().order(order).productId(item.productId()).title(item.name()).format(item.format())
-                    .quantity(item.quantity()).unitPrice(item.unitPrice()).lineTotal(item.lineTotal()).build());
-        }
-        for (var entry : quantities.entrySet()) {
-            Product p = locked.get(entry.getKey());
-            p.setStockQuantity(p.getStockQuantity() - Math.toIntExact(entry.getValue()));
-        }
-        PurchaseOrder saved = orderDao.save(order);
-        entries.forEach(cartDao::delete);
-        return toDto(saved);
+        return new ValidatedCart(current, quantities, locked);
     }
 
-    @Override @Transactional(readOnly = true)
-    public OrderDto confirmation(String email, Long orderId) {
-        User user = userDao.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found."));
-        return toDto(orderDao.findByIdAndUserId(orderId, user.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found.")));
-    }
+    private record ValidatedCart(List<CartItemDto> items, Map<Long, Long> quantities, Map<Long, Product> locked) {}
 
-    private String paymentDisplay(User user, CheckoutRequest request) {
+    private String validateAndFormatPayment(User user, CheckoutRequest request) {
         if (request.paymentType() == PaymentType.CASH_ON_DELIVERY) {
             if (request.paymentMethodId() != null)
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cash on delivery does not use a saved card.");
@@ -110,7 +122,7 @@ public class CheckoutServiceImpl implements CheckoutService {
         return method.getProvider() + " **** **** **** " + method.getLastFour();
     }
     private String shippingAddress(Address address) {
-        return Arrays.asList(address.getAddressLine(), address.getCity(), address.getProvince(), address.getPostalCode()).stream()
+        return java.util.stream.Stream.of(address.getAddressLine(), address.getCity(), address.getProvince(), address.getPostalCode())
                 .filter(value -> value != null && !value.isBlank()).collect(Collectors.joining("\n"));
     }
     private String fingerprint(List<CartItemDto> items) {

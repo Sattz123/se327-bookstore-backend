@@ -17,22 +17,27 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class ProductDaoImpl implements ProductDao {
 
+    private static final String FIELD_VISIBLE = "visible";
+    private static final String FIELD_CATEGORY = "category";
+    private static final String FIELD_NAME = "name";
+    private static final String FIELD_AUTHOR = "author";
+
     private final ProductRepository productRepository;
 
     @Override
     public Page<Product> findVisibleProducts(String query, Long categoryId, Pageable pageable) {
         Specification<Product> filters = (root, criteriaQuery, cb) -> {
             var predicates = new ArrayList<Predicate>();
-            predicates.add(cb.isTrue(root.get("visible")));
-            predicates.add(cb.isTrue(root.get("category").get("visible")));
+            predicates.add(cb.isTrue(root.get(FIELD_VISIBLE)));
+            predicates.add(cb.isTrue(root.get(FIELD_CATEGORY).get(FIELD_VISIBLE)));
             if (categoryId != null) {
-                predicates.add(cb.equal(root.get("category").get("id"), categoryId));
+                predicates.add(cb.equal(root.get(FIELD_CATEGORY).get("id"), categoryId));
             }
             if (!query.isBlank()) {
                 String pattern = "%" + query.toLowerCase(Locale.ROOT)
                         .replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
-                predicates.add(cb.or(cb.like(cb.lower(root.get("name")), pattern, '\\'),
-                        cb.like(cb.lower(root.get("author")), pattern, '\\')));
+                predicates.add(cb.or(cb.like(cb.lower(root.get(FIELD_NAME)), pattern, '\\'),
+                        cb.like(cb.lower(root.get(FIELD_AUTHOR)), pattern, '\\')));
             }
             return cb.and(predicates.toArray(Predicate[]::new));
         };
@@ -53,13 +58,13 @@ public class ProductDaoImpl implements ProductDao {
     public Page<Product> findAdminProducts(String query, Long categoryId, Boolean visible, Pageable pageable) {
         Specification<Product> filters = (root, criteriaQuery, cb) -> {
             var predicates = new ArrayList<Predicate>();
-            if (visible != null) predicates.add(cb.equal(root.get("visible"), visible));
-            if (categoryId != null) predicates.add(cb.equal(root.get("category").get("id"), categoryId));
+            if (visible != null) predicates.add(cb.equal(root.get(FIELD_VISIBLE), visible));
+            if (categoryId != null) predicates.add(cb.equal(root.get(FIELD_CATEGORY).get("id"), categoryId));
             if (!query.isBlank()) {
                 String pattern = "%" + query.toLowerCase(Locale.ROOT)
                         .replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
-                predicates.add(cb.or(cb.like(cb.lower(root.get("name")), pattern, '\\'),
-                        cb.like(cb.lower(root.get("author")), pattern, '\\')));
+                predicates.add(cb.or(cb.like(cb.lower(root.get(FIELD_NAME)), pattern, '\\'),
+                        cb.like(cb.lower(root.get(FIELD_AUTHOR)), pattern, '\\')));
             }
             return cb.and(predicates.toArray(Predicate[]::new));
         };

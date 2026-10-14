@@ -71,7 +71,8 @@ class PostgreSqlCheckoutIntegrationTests {
                 checkout.review(intruder.getEmail()).cartFingerprint()
         );
 
-        assertThatThrownBy(() -> checkout.checkout(intruder.getEmail(), request))
+        String intruderEmail = intruder.getEmail();
+        assertThatThrownBy(() -> checkout.checkout(intruderEmail, request))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
     }
@@ -94,7 +95,8 @@ class PostgreSqlCheckoutIntegrationTests {
                 checkout.review(intruder.getEmail()).cartFingerprint()
         );
 
-        assertThatThrownBy(() -> checkout.checkout(intruder.getEmail(), request))
+        String intruderEmail = intruder.getEmail();
+        assertThatThrownBy(() -> checkout.checkout(intruderEmail, request))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
     }
@@ -116,8 +118,10 @@ class PostgreSqlCheckoutIntegrationTests {
         OrderDto order = checkout.checkout(customerA.getEmail(), request);
 
         User customerB = createUser("customer.b@example.com", "Customer B");
+        String customerBEmail = customerB.getEmail();
+        Long orderId = order.id();
 
-        assertThatThrownBy(() -> checkout.confirmation(customerB.getEmail(), order.id()))
+        assertThatThrownBy(() -> checkout.confirmation(customerBEmail, orderId))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
     }
