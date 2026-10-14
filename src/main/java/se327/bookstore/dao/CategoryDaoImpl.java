@@ -25,4 +25,7 @@ public class CategoryDaoImpl implements CategoryDao {
 
     @Override public Optional<Category> findById(Long id) { return categoryRepository.findById(id); }
     @Override public List<Category> findAll() { return categoryRepository.findAll(org.springframework.data.domain.Sort.by("name", "id")); }
+    @Override public Optional<Category> findByIdForUpdate(Long id) { return categoryRepository.findByIdForUpdate(id); }
+    @Override public Category save(Category category) { return categoryRepository.saveAndFlush(category); }
+    @Override public void delete(Category category) { categoryRepository.delete(category); categoryRepository.flush(); }
 }

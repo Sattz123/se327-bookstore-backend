@@ -12,4 +12,7 @@ public interface CategoryDao {
 
     Optional<Category> findById(Long id);
     List<Category> findAll();
+    Optional<Category> findByIdForUpdate(Long id);
+    Category save(Category category);
+    void delete(Category category);
 }

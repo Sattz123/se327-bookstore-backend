@@ -63,7 +63,7 @@ public class AdminProductService {
         return product;
     }
     private void apply(Product product, AdminProductRequest request) {
-        product.setCategory(categories.findById(request.categoryId())
+        product.setCategory(categories.findByIdForUpdate(request.categoryId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose an existing category.")));
         product.setName(request.name().strip());
         product.setDescription(optional(request.description()));

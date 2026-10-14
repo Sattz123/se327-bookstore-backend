@@ -300,6 +300,14 @@ Files persist in the ignored `uploads/products` folder, configurable through `PR
 
 Database changes and product version checks use the existing product lock. Rollbacks remove newly written files; replacements/removals delete only managed upload files after a successful commit. Development seed images are not deleted. Back up the upload directory alongside the database. New image URLs use long-lived caching; replacements get a new filename.
 
+## Administrator categories (Stage 17)
+
+Admin-only `/api/admin/categories` supports GET (`q` search) and POST; `/{id}` supports GET, PUT and DELETE (`?version=...`). POST/PUT use multipart `category` (JSON: `name`, optional `imageUrl`, `visible`, and `version` for edits) plus an optional PNG/JPEG `file`. An image can be uploaded with category creation in one transaction. Existing image URLs are supported; null removes the cover. PATCH `/{id}/visibility` accepts `{ visible, version }`.
+
+Responses include product count, visibility and optimistic version. V12 adds category versions. Conflicting edits return 409. Deletion returns 204 only for empty categories; products including archived books must first be reassigned using the product editor. Category row locks also protect product assignment against concurrent deletion. Hiding a category hides its products from public browsing without changing individual product visibility flags; showing it restores otherwise-visible books.
+
+Category uploads reuse the validated persistent image store. A rollback removes a newly uploaded file. Previously saved category cover files are retained on replacement/removal/deletion because image URLs may be shared by other records. Retain and back up the image directory with the database.
+
 ## Stop local services
 
 Stop the backend using IntelliJ's Stop button or Ctrl+C in its terminal. Stop PostgreSQL without deleting its stored data:
