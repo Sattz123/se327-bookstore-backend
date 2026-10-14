@@ -1,6 +1,15 @@
 # Bookstore backend
 
-## Simulated payment methods (Stage 10)
+## Full regression and feature comparison (Stage 21)
+
+PostgreSQL integration tests (`src/test/java/se327/bookstore/service/PostgreSqlCheckoutIntegrationTests.java`) verify critical database transaction semantics, isolation, ownership boundaries, and concurrent stock controls:
+- **Ownership boundaries:** Checkout strictly verifies ownership of chosen addresses and payment methods, returning `404 Not Found` when a customer attempts to reference records owned by another user. Order confirmation lookups similarly reject cross-user access.
+- **Snapshot isolation and audit immutability:** When an order is placed, delivery and line-item details are captured in database snapshots (`PurchaseOrder` and `OrderItem`). Subsequent modifications to the customer's address book or live product catalog (such as title, description, or price updates) do not alter the saved order snapshot.
+- **Concurrent stock deduction with multiple formats:** When multiple concurrent transactions compete for shared book stock across different book formats (e.g. `PAPERBACK` and `HARDCOVER`), pessimistic locking (`SELECT ... FOR UPDATE`) ordered by product ID ensures race-condition-free stock deduction without database deadlocks. Transactions exceeding available stock receive a `409 Conflict`, while remaining inventory is accurately preserved.
+- **Optimistic concurrency control:** Administrative entity updates enforce version tracking (`@Version`), preventing concurrent overwrite conflicts.
+
+All 250 unit and integration tests across 29 test classes pass cleanly against PostgreSQL.
+
 
 Authenticated `GET /api/payment-methods`, `POST /api/payment-methods`, `PUT /api/payment-methods/{id}/default`, and `DELETE /api/payment-methods/{id}` manage only the current user's records. Create returns 201, delete 204, and missing/foreign IDs 404. The existing controller/service/DAO/repository structure is retained.
 
