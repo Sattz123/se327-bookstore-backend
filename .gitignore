@@ -39,3 +39,4 @@ build/
 !.env.sonar.example
 .scannerwork/
 .sonar/
+/uploads/
