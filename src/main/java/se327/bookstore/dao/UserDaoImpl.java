@@ -14,6 +14,12 @@ public class UserDaoImpl implements UserDao {
     private final UserRepository userRepository;
 
     @Override
+    public org.springframework.data.domain.Page<se327.bookstore.dto.AdminCustomerDto> findCustomers(String query, org.springframework.data.domain.Pageable pageable) {
+        return userRepository.findCustomerSummaries(query, pageable).map(c -> new se327.bookstore.dto.AdminCustomerDto(
+                c.getId(), c.getUsername(), c.getEmail(), c.getPhone(), c.getCreatedAt(), c.getOrderCount(), c.getTotalSpent()));
+    }
+
+    @Override
     public User save(User user) {
         return userRepository.save(user);
     }

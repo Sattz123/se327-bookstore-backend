@@ -17,4 +17,6 @@ public interface UserDao {
     boolean existsByEmail(String email);
 
     boolean existsByEmailAndIdNot(String email, Long id);
+
+    org.springframework.data.domain.Page<se327.bookstore.dto.AdminCustomerDto> findCustomers(String query, org.springframework.data.domain.Pageable pageable);
 }
