@@ -70,6 +70,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(ex, problem, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
     }
 
+    @ExceptionHandler(InvalidPasswordResetTokenException.class)
+    public ResponseEntity<Object> handleInvalidPasswordResetToken(
+            InvalidPasswordResetTokenException ex, WebRequest request) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST, ex.getMessage());
+        problem.setTitle("Invalid Password Reset Token");
+        return handleExceptionInternal(ex, problem, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> handleUnexpectedException(Exception ex, WebRequest request) {
         logger.error("Unexpected API error", ex);
