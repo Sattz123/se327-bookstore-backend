@@ -278,6 +278,12 @@ Retry the **same payload with the same checkout key** after a lost response: it 
 
 Authenticated `GET /api/orders` lists the current customer's orders, newest first, with ID, status, saved payment display, total and creation date. A new customer receives `[]`. `GET /api/orders/{id}` returns the saved order, delivery and item snapshots using the same ownership rules as checkout confirmation. Missing or foreign orders return 404; invalid IDs return 400. Catalog prices and edited addresses/cards do not replace purchase snapshots.
 
+## Administrator access (Stage 14)
+
+All `/api/admin/**` endpoints require the database-backed `ADMIN` role: missing/expired JWTs return 401 and customer accounts return 403. `GET /api/admin/session` returns the signed-in administrator's profile for the back office. The same `/api/auth/login` endpoint authenticates both roles; public registration always creates `CUSTOMER` accounts and does not accept a role.
+
+The existing `dev` profile seed supplies a local demonstration administrator. For a separate administrator without demo data, add these settings to your ignored backend `.env`: `APP_ADMIN_BOOTSTRAP_ENABLED=true`, `APP_ADMIN_BOOTSTRAP_EMAIL`, `APP_ADMIN_BOOTSTRAP_USERNAME` (optional), and `APP_ADMIN_BOOTSTRAP_PASSWORD`. Start the backend once, then remove the bootstrap settings. Email, username and password follow registration validation; the password is BCrypt-hashed. Bootstrap is disabled by default, refuses to promote an existing customer, and leaves an existing administrator's password/profile unchanged. There is no public administrator-registration API.
+
 ## Stop local services
 
 Stop the backend using IntelliJ's Stop button or Ctrl+C in its terminal. Stop PostgreSQL without deleting its stored data:
