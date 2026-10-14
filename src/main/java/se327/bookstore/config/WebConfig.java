@@ -1,5 +1,6 @@
 package se327.bookstore.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -15,16 +16,19 @@ public class WebConfig implements WebMvcConfigurer {
     private final String frontendOrigin;
     private final ProductImageStorage imageStorage;
 
-    public WebConfig(@Value("${app.frontend-origin}") String frontendOrigin, ProductImageStorage imageStorage) {
+    public WebConfig(@Value("${app.frontend-origin}") String frontendOrigin,
+                     @Autowired(required = false) ProductImageStorage imageStorage) {
         this.frontendOrigin = frontendOrigin;
         this.imageStorage = imageStorage;
     }
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler(ProductImageStorage.URL_PREFIX + "**")
-                .addResourceLocations(imageStorage.resourceLocation())
-                .setCacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable());
+        if (imageStorage != null) {
+            registry.addResourceHandler(ProductImageStorage.URL_PREFIX + "**")
+                    .addResourceLocations(imageStorage.resourceLocation())
+                    .setCacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable());
+        }
     }
 
     @Override

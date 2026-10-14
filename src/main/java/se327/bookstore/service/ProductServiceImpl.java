@@ -22,7 +22,7 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductDao productDao;
     private final CategoryService categoryService;
-    private static final int PAGE_SIZE = 15;
+    private static final int PAGE_SIZE = 16;
     private static final Sort NEWEST_FIRST = Sort.by(Sort.Direction.DESC, "createdAt", "id");
 
     @Override
