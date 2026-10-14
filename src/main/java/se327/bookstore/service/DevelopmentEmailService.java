@@ -56,9 +56,9 @@ public class DevelopmentEmailService implements EmailService {
 
     public Optional<SentEmailRecord> findLatestEmailByRecipient(String recipientEmail) {
         for (int i = sentEmails.size() - 1; i >= 0; i--) {
-            SentEmailRecord record = sentEmails.get(i);
-            if (record.recipient().equalsIgnoreCase(recipientEmail)) {
-                return Optional.of(record);
+            SentEmailRecord emailRecord = sentEmails.get(i);
+            if (emailRecord.recipient().equalsIgnoreCase(recipientEmail)) {
+                return Optional.of(emailRecord);
             }
         }
         return Optional.empty();

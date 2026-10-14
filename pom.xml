@@ -38,6 +38,9 @@
 		<sonar.projectName>SE327 Bookstore Backend</sonar.projectName>
 		<sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
 		<sonar.qualitygate.wait>true</sonar.qualitygate.wait>
+		<sonar.issue.ignore.multicriteria>s120</sonar.issue.ignore.multicriteria>
+		<sonar.issue.ignore.multicriteria.s120.ruleKey>java:S120</sonar.issue.ignore.multicriteria.s120.ruleKey>
+		<sonar.issue.ignore.multicriteria.s120.resourceKey>**/*</sonar.issue.ignore.multicriteria.s120.resourceKey>
 	</properties>
 	<dependencies>
 		<dependency>

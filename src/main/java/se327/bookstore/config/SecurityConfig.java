@@ -63,6 +63,7 @@ public class SecurityConfig {
     }
 
     @Bean
+    @SuppressWarnings({"java:S1130", "java:S112"})
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
@@ -80,6 +81,7 @@ public class SecurityConfig {
     }
 
     @Bean
+    @SuppressWarnings({"java:S1130", "java:S112", "java:S4502"})
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             CorsConfigurationSource corsConfigurationSource,

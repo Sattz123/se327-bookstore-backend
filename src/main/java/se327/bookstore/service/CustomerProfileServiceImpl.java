@@ -19,6 +19,8 @@ import se327.bookstore.security.JwtTokenService;
 @RequiredArgsConstructor
 public class CustomerProfileServiceImpl implements CustomerProfileService {
 
+    private static final String NOT_FOUND_EMAIL_PREFIX = "User not found with email: ";
+
     private final UserDao userDao;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
@@ -30,7 +32,7 @@ public class CustomerProfileServiceImpl implements CustomerProfileService {
             throw new UserNotFoundException("User not found.");
         }
         User user = userDao.findByEmail(email.trim().toLowerCase())
-                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + email));
+                .orElseThrow(() -> new UserNotFoundException(NOT_FOUND_EMAIL_PREFIX + email));
         return UserDto.fromEntity(user);
     }
 
@@ -38,7 +40,7 @@ public class CustomerProfileServiceImpl implements CustomerProfileService {
     @Transactional
     public AuthResponseDto updateProfile(String currentEmail, UpdateProfileRequest request) {
         User user = userDao.findByEmail(currentEmail.trim().toLowerCase())
-                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + currentEmail));
+                .orElseThrow(() -> new UserNotFoundException(NOT_FOUND_EMAIL_PREFIX + currentEmail));
 
         String newEmail = request.email().trim().toLowerCase();
 
@@ -62,7 +64,7 @@ public class CustomerProfileServiceImpl implements CustomerProfileService {
     @Transactional
     public void changePassword(String email, ChangePasswordRequest request) {
         User user = userDao.findByEmail(email.trim().toLowerCase())
-                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + email));
+                .orElseThrow(() -> new UserNotFoundException(NOT_FOUND_EMAIL_PREFIX + email));
 
         if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
             throw new InvalidCurrentPasswordException("Incorrect current password.");

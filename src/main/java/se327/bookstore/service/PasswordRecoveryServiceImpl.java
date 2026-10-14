@@ -26,6 +26,9 @@ public class PasswordRecoveryServiceImpl implements PasswordRecoveryService {
 
     public static final String GENERIC_RESET_REQUEST_MESSAGE =
             "If an account with that email exists, password reset instructions have been sent.";
+    public static final String MSG_INVALID_TOKEN = "Invalid password reset token.";
+    public static final String MSG_TOKEN_ALREADY_USED = "Password reset token has already been used.";
+    public static final String MSG_TOKEN_EXPIRED = "Password reset token has expired.";
     public static final int TOKEN_EXPIRY_MINUTES = 30;
 
     private final UserDao userDao;
@@ -65,21 +68,21 @@ public class PasswordRecoveryServiceImpl implements PasswordRecoveryService {
     @Transactional(readOnly = true)
     public VerifyResetTokenResponse verifyResetToken(String token) {
         if (token == null || token.isBlank()) {
-            return new VerifyResetTokenResponse(false, "Invalid password reset token.");
+            return new VerifyResetTokenResponse(false, MSG_INVALID_TOKEN);
         }
 
         Optional<PasswordResetToken> tokenOptional = passwordResetTokenDao.findByToken(token.strip());
         if (tokenOptional.isEmpty()) {
-            return new VerifyResetTokenResponse(false, "Invalid password reset token.");
+            return new VerifyResetTokenResponse(false, MSG_INVALID_TOKEN);
         }
 
         PasswordResetToken resetToken = tokenOptional.get();
         if (resetToken.isUsed()) {
-            return new VerifyResetTokenResponse(false, "Password reset token has already been used.");
+            return new VerifyResetTokenResponse(false, MSG_TOKEN_ALREADY_USED);
         }
 
         if (resetToken.isExpired()) {
-            return new VerifyResetTokenResponse(false, "Password reset token has expired.");
+            return new VerifyResetTokenResponse(false, MSG_TOKEN_EXPIRED);
         }
 
         return new VerifyResetTokenResponse(true, "Token is valid.");
@@ -89,14 +92,14 @@ public class PasswordRecoveryServiceImpl implements PasswordRecoveryService {
     public MessageResponseDto resetPassword(ResetPasswordRequest request) {
         String tokenString = request.token().strip();
         PasswordResetToken resetToken = passwordResetTokenDao.findByToken(tokenString)
-                .orElseThrow(() -> new InvalidPasswordResetTokenException("Invalid password reset token."));
+                .orElseThrow(() -> new InvalidPasswordResetTokenException(MSG_INVALID_TOKEN));
 
         if (resetToken.isUsed()) {
-            throw new InvalidPasswordResetTokenException("Password reset token has already been used.");
+            throw new InvalidPasswordResetTokenException(MSG_TOKEN_ALREADY_USED);
         }
 
         if (resetToken.isExpired()) {
-            throw new InvalidPasswordResetTokenException("Password reset token has expired.");
+            throw new InvalidPasswordResetTokenException(MSG_TOKEN_EXPIRED);
         }
 
         User user = resetToken.getUser();

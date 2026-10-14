@@ -71,7 +71,9 @@ public class AdminCategoryService {
         try {
             URI uri = URI.create(url);
             if (("https".equalsIgnoreCase(uri.getScheme()) || "http".equalsIgnoreCase(uri.getScheme())) && uri.getHost() != null) return url;
-        } catch (IllegalArgumentException ignored) { }
+        } catch (IllegalArgumentException ignored) {
+            /* Fall through to reject invalid URI syntax. */
+        }
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Image URL must be an /images/ path or an HTTP(S) URL.");
     }
     private ResponseStatusException notFound() { return new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found."); }

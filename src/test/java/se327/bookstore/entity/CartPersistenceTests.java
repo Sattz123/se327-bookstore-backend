@@ -46,7 +46,8 @@ class CartPersistenceTests {
     }
     @Test void databaseRejectsZeroQuantity() {
         CartItem item = save(customer, BookFormat.PAPERBACK);
-        assertThatThrownBy(() -> jdbc.update("UPDATE cart_items SET quantity = 0 WHERE id = ?", item.getId()))
+        long itemId = item.getId();
+        assertThatThrownBy(() -> jdbc.update("UPDATE cart_items SET quantity = 0 WHERE id = ?", itemId))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
     @Test void deletingAUserRemovesOnlyTheirCart() {

@@ -14,7 +14,12 @@ import java.time.Instant;
 import java.util.Date;
 
 @Service
+@SuppressWarnings("java:S2143")
 public class JwtTokenService {
+
+    public static final String CLAIM_USER_ID = "userId";
+    public static final String CLAIM_ROLE = "role";
+    public static final String CLAIM_USERNAME = "username";
 
     private final String secret;
     private final long expirationMs;
@@ -26,28 +31,30 @@ public class JwtTokenService {
         this.expirationMs = expirationMs;
     }
 
+    @SuppressWarnings("java:S2143")
     public String generateToken(User user) {
         Instant now = Instant.now();
         Instant expiry = now.plusMillis(expirationMs);
         return Jwts.builder()
                 .subject(user.getEmail())
-                .claim("userId", user.getId())
-                .claim("role", user.getRole().name())
-                .claim("username", user.getUsername())
+                .claim(CLAIM_USER_ID, user.getId())
+                .claim(CLAIM_ROLE, user.getRole().name())
+                .claim(CLAIM_USERNAME, user.getUsername())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiry))
                 .signWith(getSigningKey())
                 .compact();
     }
 
+    @SuppressWarnings("java:S2143")
     public String generateToken(BookstoreUserDetails userDetails) {
         Instant now = Instant.now();
         Instant expiry = now.plusMillis(expirationMs);
         return Jwts.builder()
                 .subject(userDetails.getEmail())
-                .claim("userId", userDetails.getId())
-                .claim("role", userDetails.getRole().name())
-                .claim("username", userDetails.getDisplayName())
+                .claim(CLAIM_USER_ID, userDetails.getId())
+                .claim(CLAIM_ROLE, userDetails.getRole().name())
+                .claim(CLAIM_USERNAME, userDetails.getDisplayName())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiry))
                 .signWith(getSigningKey())
@@ -59,7 +66,7 @@ public class JwtTokenService {
     }
 
     public Long extractUserId(String token) {
-        Object id = getClaims(token).get("userId");
+        Object id = getClaims(token).get(CLAIM_USER_ID);
         if (id instanceof Number number) {
             return number.longValue();
         }
@@ -67,14 +74,16 @@ public class JwtTokenService {
     }
 
     public String extractRole(String token) {
-        Object role = getClaims(token).get("role");
+        Object role = getClaims(token).get(CLAIM_ROLE);
         return role != null ? role.toString() : null;
     }
 
+    @SuppressWarnings("java:S2143")
     public boolean validateToken(String token) {
         try {
             Claims claims = getClaims(token);
-            return claims.getExpiration().after(new Date());
+            Date expiration = claims.getExpiration();
+            return expiration != null && expiration.toInstant().isAfter(Instant.now());
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }

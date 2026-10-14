@@ -3,6 +3,7 @@ package se327.bookstore.entity;
 import jakarta.persistence.EntityManager;
 import jakarta.validation.ConstraintViolationException;
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.MigrationInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -84,10 +85,11 @@ class CatalogPersistenceTests {
     @CsvSource({"-1.00, 1", "18.50, -1"})
     void databaseRejectsNegativePricesOrStock(BigDecimal price, int stock) {
         Category category = createCategory();
+        long categoryId = category.getId();
 
         assertThatThrownBy(() -> jdbcTemplate.update(
                 "INSERT INTO products (category_id, name, price, stock_quantity) VALUES (?, ?, ?, ?)",
-                category.getId(), "Invalid book", price, stock))
+                categoryId, "Invalid book", price, stock))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
@@ -96,9 +98,10 @@ class CatalogPersistenceTests {
         Product product = createProduct();
         entityManager.persist(product);
         entityManager.flush();
+        long categoryId = product.getCategory().getId();
 
         assertThatThrownBy(() -> jdbcTemplate.update(
-                "DELETE FROM categories WHERE id = ?", product.getCategory().getId()))
+                "DELETE FROM categories WHERE id = ?", categoryId))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
@@ -107,10 +110,11 @@ class CatalogPersistenceTests {
         Product product = createProduct();
         entityManager.persist(product);
         entityManager.flush();
+        long productId = product.getId();
 
         assertThatThrownBy(() -> jdbcTemplate.update(
                 "INSERT INTO product_formats (product_id, format) VALUES (?, ?)",
-                product.getId(), "UNKNOWN"))
+                productId, "UNKNOWN"))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
@@ -119,16 +123,13 @@ class CatalogPersistenceTests {
         Product product = createProduct();
         product.setImages(new ArrayList<>(List.of("1.png", "2.png", "3.png", "4.png", "5.png", "6.png")));
 
-        assertThatThrownBy(() -> {
-            entityManager.persist(product);
-            entityManager.flush();
-        }).isInstanceOf(ConstraintViolationException.class);
+        assertThatThrownBy(() -> entityManager.persist(product)).isInstanceOf(ConstraintViolationException.class);
     }
 
     @Test
     void appliesTheMigrationOnceAndDoesNotRecreateTables() {
         assertThat(flyway.info().applied())
-                .extracting(migration -> migration.getScript())
+                .extracting(MigrationInfo::getScript)
                 .contains("V1__create_catalog_tables.sql");
         assertThat(flyway.migrate().migrationsExecuted).isZero();
     }
