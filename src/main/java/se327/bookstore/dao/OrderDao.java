@@ -10,4 +10,7 @@ public interface OrderDao {
     Optional<PurchaseOrder> findByUserIdAndCheckoutKey(Long userId, UUID key);
     Optional<PurchaseOrder> findByIdAndUserId(Long id, Long userId);
     PurchaseOrder save(PurchaseOrder order);
+    Optional<PurchaseOrder> findById(Long id);
+    Optional<PurchaseOrder> findByIdForUpdate(Long id);
+    org.springframework.data.domain.Page<PurchaseOrder> findAdminOrders(String query, se327.bookstore.entity.OrderStatus status, org.springframework.data.domain.Pageable pageable);
 }
