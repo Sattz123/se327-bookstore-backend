@@ -274,6 +274,10 @@ The server verifies address/card ownership and expiry, locks the customer and pr
 
 Retry the **same payload with the same checkout key** after a lost response: it returns the original order, even after the cart is cleared. Reusing a successful key for changed details returns 409. Keys are scoped to the customer; a new purchase needs a new key and review. Cash orders are `PENDING`; simulated card orders are `COMPLETED`. Both consume stock and clear the cart. The simulated card path only uses saved masked display metadata and never contacts a payment gateway.
 
+## Customer order history (Stage 13)
+
+Authenticated `GET /api/orders` lists the current customer's orders, newest first, with ID, status, saved payment display, total and creation date. A new customer receives `[]`. `GET /api/orders/{id}` returns the saved order, delivery and item snapshots using the same ownership rules as checkout confirmation. Missing or foreign orders return 404; invalid IDs return 400. Catalog prices and edited addresses/cards do not replace purchase snapshots.
+
 ## Stop local services
 
 Stop the backend using IntelliJ's Stop button or Ctrl+C in its terminal. Stop PostgreSQL without deleting its stored data:
