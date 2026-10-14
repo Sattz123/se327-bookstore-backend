@@ -14,6 +14,10 @@ import java.util.UUID;
 public class PurchaseOrder {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Version @Column(nullable = false)
+    private long version;
+    @org.hibernate.annotations.UpdateTimestamp @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "user_id", nullable = false)
     private User user;
     @Column(name = "checkout_key", nullable = false)

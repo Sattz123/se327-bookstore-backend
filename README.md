@@ -312,6 +312,14 @@ Category uploads reuse the validated persistent image store. A rollback removes 
 
 `GET /api/admin/customers?q=...&page=1` is admin-only and read-only. It lists customers (excluding administrators), newest first, with name, email, phone, join date, order count and total order value. Search matches literal name/email text case-insensitively; pages contain 20 entries. Cancelled orders are excluded from order count/value, matching the original customer-list scope. Pending orders are included, so total value is not a paid-revenue figure. Password hashes, reset tokens and JWTs are never returned.
 
+## Administrator orders (Stage 18)
+
+Admin-only `GET /api/admin/orders?q=...&status=...&page=1` searches order ID, customer name/email, filters by status, and returns 20 newest orders per page. `GET /api/admin/orders/{id}` includes saved purchase/delivery/payment snapshots, current customer contact details, the order version and allowed next statuses. PATCH `/{id}/status` accepts `{ status, version }`. V13 adds `PROCESSING`, `CANCELLED`, versions and update timestamps.
+
+Transitions: PENDING → PROCESSING/COMPLETED/CANCELLED; PROCESSING → COMPLETED/CANCELLED; COMPLETED → CANCELLED; CANCELLED is terminal. Completed simulated-card orders can be cancelled; no real refund gateway is involved. Cancellation locks the order and products in ascending ID order and restores quantities across formats exactly once, including hidden/archived products. Missing products or stock overflow reject the whole cancellation. Stock and status changes commit or roll back together. Completing/processing an order never deducts stock again because checkout already deducted it.
+
+Repeating the current status is idempotent even with the older request version; other stale/invalid transitions return 409. Customer history/confirmation use the same order status, and customer totals exclude cancellations. Never edit order item snapshots to match current catalog values.
+
 ## Stop local services
 
 Stop the backend using IntelliJ's Stop button or Ctrl+C in its terminal. Stop PostgreSQL without deleting its stored data:

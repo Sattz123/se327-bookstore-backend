@@ -124,8 +124,6 @@ public class CheckoutServiceImpl implements CheckoutService {
     }
     private ResponseStatusException conflict(String detail) { return new ResponseStatusException(HttpStatus.CONFLICT, detail); }
     private OrderDto toDto(PurchaseOrder order) {
-        return new OrderDto(order.getId(), order.getStatus(), order.getPaymentType(), order.getPaymentDisplay(), order.getRecipientName(),
-                order.getShippingPhone(), order.getShippingAddress(), order.getTotal(), order.getCreatedAt(), order.getItems().stream()
-                .map(i -> new OrderItemDto(i.getProductId(), i.getTitle(), i.getFormat(), i.getQuantity(), i.getUnitPrice(), i.getLineTotal())).toList());
+        return OrderDto.fromEntity(order);
     }
 }
