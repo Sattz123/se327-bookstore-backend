@@ -91,4 +91,19 @@ class DevelopmentSeedTests {
         assertThat(jdbcTemplate.queryForObject("SELECT stock_quantity FROM products WHERE id = 1", Integer.class))
                 .isEqualTo(3);
     }
+
+    @Test
+    void seedsDevelopmentAdminAndCustomerAccounts() {
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT email FROM users WHERE role = 'ADMIN'", String.class))
+                .isEqualTo("admin@bookstore.com");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT email FROM users WHERE role = 'CUSTOMER'", String.class))
+                .isEqualTo("customer@bookstore.com");
+
+        Long newUserId = jdbcTemplate.queryForObject(
+                "INSERT INTO users (username, email, password_hash, role) VALUES ('Extra', 'extra@example.com', 'hash', 'CUSTOMER') RETURNING id",
+                Long.class);
+        assertThat(newUserId).isGreaterThan(2L);
+    }
 }
