@@ -127,7 +127,9 @@ class CatalogPersistenceTests {
 
     @Test
     void appliesTheMigrationOnceAndDoesNotRecreateTables() {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("1");
+        assertThat(flyway.info().applied())
+                .extracting(migration -> migration.getScript())
+                .contains("V1__create_catalog_tables.sql");
         assertThat(flyway.migrate().migrationsExecuted).isZero();
     }
 

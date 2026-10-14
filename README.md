@@ -38,6 +38,7 @@ Both Docker Compose and Spring Boot read this backend folder's `.env`. Commit `.
 | `POSTGRES_USER` | `bookstore` | Database user |
 | `POSTGRES_PASSWORD` | `bookstore_dev` | Local development password |
 | `FRONTEND_ORIGIN` | `http://localhost:5173` | Exact frontend origin allowed by CORS, without a trailing slash |
+| `SPRING_PROFILES_ACTIVE` | `dev` | Enable the local sample catalog and its cover images; leave unset in production/hosted CI |
 
 `FRONTEND_ORIGIN` defaults to `http://localhost:5173` when absent. If Vite starts on a different port or hostname, update this setting and restart the backend. The frontend calls port 8080 directly; it has its own environment configuration.
 
@@ -58,9 +59,25 @@ The first migration, `V1__create_catalog_tables.sql`, adds four tables:
 
 `Category` and `Product` are JPA entities in the `entity` folder. Images and formats use `@ElementCollection`, similar to the lab's image lists. Prices use `BigDecimal` and PostgreSQL `NUMERIC(10, 2)`. Database constraints reject negative prices/stock, unknown formats, and invalid image positions. Category deletion is blocked while products still reference it; deleting a product removes its own image/format rows.
 
-The author and formats replace the original JSON attributes with typed fields and a related table. Visibility and stock remain separate fields. No catalog APIs, uploads, or development seed data are added in this step.
+The author and formats replace the original JSON attributes with typed fields and a related table. Visibility and stock remain separate fields. Catalog APIs and uploads are added in later steps.
 
 The first startup creates these tables in an empty application database and records the migration in `flyway_schema_history`. Later startups validate the migration history and only apply new versions. Keep applied migrations unchanged; add a new numbered migration for later schema changes. Existing databases with manually created catalog tables need an explicit migration plan rather than enabling Flyway baselining or dropping data automatically.
+
+### Development seed data
+
+`application-dev.properties` adds `classpath:dev/db/migration` to Flyway's normal migration location. Its `V2__seed_bookstore_catalog.sql` adapts only the original catalog: five categories, 60 books (12 per category), 60 cover references, and 180 available-format rows. Original book IDs, category IDs, titles, authors, descriptions, prices, stock, and visibility are preserved. PostgreSQL identity sequences are advanced so new records do not collide with the original IDs.
+
+The sample covers are copied unchanged into `src/main/resources/dev/static/images/products`. They are served as `/images/products/<filename>` only with the `dev` profile. The original SQL's five category JPG files were not present in the source project, so those optional category image values are `NULL`. Users, passwords, orders, and payment records from the old SQL are not imported.
+
+For local development, `.env.example` enables `SPRING_PROFILES_ACTIVE=dev`; the local `.env` prepared for this project does too. Start normally with `spring-boot:run` or IntelliJ. For an existing clone without this setting, add it to your own `.env` before starting. A temporary override is:
+
+```powershell
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"
+```
+
+Flyway applies the seed once. Restarts do not insert duplicates or reset later book edits. The seed expects an empty catalog; it will fail on conflicting IDs rather than overwrite existing data. Keep using the `dev` profile for a database initialized this way. Switching that same database to a profile that cannot see its applied development migration causes Flyway validation to fail. Production and hosted CI use separate databases without the `dev` profile and run schema migrations only.
+
+Future shared schema migrations stay under `db/migration`, with new versions such as `V3__...`; keep the version numbers unique across both migration folders.
 
 ## Tests and build
 
@@ -81,6 +98,8 @@ The web tests can run separately without PostgreSQL:
 They check request validation, malformed/missing JSON, missing routes, unsupported methods/content types, unexpected errors, and allowed/rejected CORS origins, methods, and headers. They also verify changing the allowed origin and preserving CORS headers on error responses. Their example endpoints and mocked dependency only exist during tests.
 
 `CatalogPersistenceTests` verifies the migrated schema with PostgreSQL, entity/collection persistence, stock/visibility updates, database constraints, and repeat migration behavior. Its test data is rolled back after each test.
+
+`DevelopmentSeedTests` activates the development profile in a separate `development_seed_test` schema. It verifies the seed counts, original details, format/image references, identity sequences, and that a repeated migration does not reset edits. Temporary edits are rolled back, and these tests do not seed the application's normal schema when CI uses the default profile.
 
 ### JUnit, Mockito, and coverage
 
