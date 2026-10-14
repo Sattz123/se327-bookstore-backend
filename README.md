@@ -243,6 +243,23 @@ The `errors` array is provided for request-body field validation. Other MVC erro
 
 References: [Spring error responses](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-rest-exceptions.html) and [Spring MVC CORS](https://docs.spring.io/spring-framework/reference/web/webmvc-cors.html).
 
+## Shopping cart (Stage 11)
+
+Authenticated cart endpoints derive the customer from the JWT:
+
+| Method | Endpoint | Body |
+| --- | --- | --- |
+| GET | `/api/cart` | — |
+| POST | `/api/cart/items` | `productId`, `format`, `quantity` |
+| PUT | `/api/cart/items/{id}` | `quantity` (replacement value) |
+| DELETE | `/api/cart/items/{id}` | — |
+
+All successful operations return `{ items, totalQuantity, total }`; adding returns 201, the others 200. Items include the saved format, current unit price, line total, stock, and availability. Money is calculated using `BigDecimal` and current catalog prices. Client prices and owner IDs are never used.
+
+Adding the same product/format increases its quantity; different formats are separate rows. Quantities must be positive integers, the format must be offered, and the customer's combined quantity across all formats cannot exceed the product's shared stock (409). Cart changes do not reserve or deduct stock. Per-customer locking prevents concurrent additions from losing quantities. Foreign or missing item IDs return 404. Existing unavailable items remain visible with `available: false` and can be removed; stock and prices must be rechecked at checkout in Stage 12.
+
+Migration V9 adds cart storage and enforces one row per customer/product/format.
+
 ## Stop local services
 
 Stop the backend using IntelliJ's Stop button or Ctrl+C in its terminal. Stop PostgreSQL without deleting its stored data:
