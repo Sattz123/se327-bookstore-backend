@@ -11,10 +11,8 @@ import se327.bookstore.entity.User;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.Date;
 
 @Service
-@SuppressWarnings("java:S2143")
 public class JwtTokenService {
 
     public static final String CLAIM_USER_ID = "userId";
@@ -31,7 +29,6 @@ public class JwtTokenService {
         this.expirationMs = expirationMs;
     }
 
-    @SuppressWarnings("java:S2143")
     public String generateToken(User user) {
         Instant now = Instant.now();
         Instant expiry = now.plusMillis(expirationMs);
@@ -40,13 +37,12 @@ public class JwtTokenService {
                 .claim(CLAIM_USER_ID, user.getId())
                 .claim(CLAIM_ROLE, user.getRole().name())
                 .claim(CLAIM_USERNAME, user.getUsername())
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(expiry))
+                .claim("iat", now.getEpochSecond())
+                .claim("exp", expiry.getEpochSecond())
                 .signWith(getSigningKey())
                 .compact();
     }
 
-    @SuppressWarnings("java:S2143")
     public String generateToken(BookstoreUserDetails userDetails) {
         Instant now = Instant.now();
         Instant expiry = now.plusMillis(expirationMs);
@@ -55,8 +51,8 @@ public class JwtTokenService {
                 .claim(CLAIM_USER_ID, userDetails.getId())
                 .claim(CLAIM_ROLE, userDetails.getRole().name())
                 .claim(CLAIM_USERNAME, userDetails.getDisplayName())
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(expiry))
+                .claim("iat", now.getEpochSecond())
+                .claim("exp", expiry.getEpochSecond())
                 .signWith(getSigningKey())
                 .compact();
     }
@@ -78,12 +74,14 @@ public class JwtTokenService {
         return role != null ? role.toString() : null;
     }
 
-    @SuppressWarnings("java:S2143")
     public boolean validateToken(String token) {
         try {
             Claims claims = getClaims(token);
-            Date expiration = claims.getExpiration();
-            return expiration != null && expiration.toInstant().isAfter(Instant.now());
+            Object expiration = claims.get("exp");
+            if (expiration instanceof Number number) {
+                return Instant.ofEpochSecond(number.longValue()).isAfter(Instant.now());
+            }
+            return false;
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
