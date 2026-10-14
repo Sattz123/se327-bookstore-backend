@@ -4,8 +4,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import se327.bookstore.entity.PurchaseOrder;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
 
 public interface OrderRepository extends JpaRepository<PurchaseOrder, Long> {
+    List<PurchaseOrder> findByUserIdOrderByCreatedAtDescIdDesc(Long userId);
     Optional<PurchaseOrder> findByUserIdAndCheckoutKey(Long userId, UUID checkoutKey);
     Optional<PurchaseOrder> findByIdAndUserId(Long id, Long userId);
 }
