@@ -123,6 +123,8 @@ They check request validation, malformed/missing JSON, missing routes, unsupport
 
 `ProductCatalogTests` runs the real controller, service, DAO, and repository with MockMvc and PostgreSQL in a separate `catalog_api_test` schema. Test fixtures roll back after each test. It covers public DTOs and ordered collections, list/detail success, missing/invalid IDs, book/category visibility, out-of-stock books, optional fields, empty results, and CORS. `ProductControllerFailureTests` simulates service failures and checks safe 500 responses. Hosted CI runs all of these through the existing Maven job.
 
+`CatalogDiscoveryTests` uses the isolated `discovery_api_test` schema to verify 15-item pagination and stable ordering, combined search/category/page requests, literal wildcard characters, empty results, invalid pages/filters, category visibility, and the newest-eight featured selection. Its fixtures also roll back after each test.
+
 ### JUnit, Mockito, and coverage
 
 The Spring Boot web MVC test starter already provides JUnit Jupiter, Mockito, and Spring's MVC test tools. Versions are managed by Spring Boot. `@MockitoBean` replaces a dependency in the web test context so a test can simulate an unexpected failure and check the public error response.
