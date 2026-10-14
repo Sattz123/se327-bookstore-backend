@@ -78,7 +78,7 @@ Run `clean verify` for a fresh build, all tests, and coverage reports. `test` ru
 | XML coverage report for later SonarQube setup | `target/site/jacoco/jacoco.xml` |
 | CSV coverage counters | `target/site/jacoco/jacoco.csv` |
 
-Reports stay under the Git-ignored `target` folder. No production classes are excluded and no coverage threshold is imposed yet. SonarQube will be configured in a later step.
+Reports stay under the Git-ignored `target` folder. No production classes are excluded and no Maven coverage threshold is imposed. The local SonarQube analysis below checks the selected server-side quality gate.
 
 JaCoCo reports bytecode instruction, line, and branch coverage; its instruction counter is not a Java source statement counter. The current production classes have no conditional branches, so branch coverage is not applicable until business conditions are implemented. Do not report this as 100% branch coverage. This foundation report is only a baseline for the small amount of code currently implemented.
 
@@ -94,9 +94,37 @@ Database settings come from the workflow's environment. The CI password is only 
 
 After committing this change, push `chore/quality-setup` using Fork. Open the backend repository's **Actions** tab on GitHub and select **Backend CI**. Review the **build-and-test** job and download **backend-test-reports** to inspect the test results and HTML/XML coverage reports. Reports are retained for seven days, and the upload step also runs after test failures so available failure reports can be inspected.
 
-A failed build or test fails the job. This workflow does not yet perform SonarQube analysis or enforce a coverage percentage. Save an actual successful GitHub run as CI evidence after pushing; local verification alone is not a GitHub Actions result.
+A failed build or test fails the job. This hosted workflow does not connect to local SonarQube. Save an actual successful GitHub run as CI evidence after pushing; local verification alone is not a GitHub Actions result.
 
 Reference: [GitHub's Maven CI guide](https://docs.github.com/en/actions/tutorials/build-and-test-code/java-with-maven) and [PostgreSQL service containers](https://docs.github.com/en/actions/tutorials/use-containerized-services/create-postgresql-service-containers).
+
+## Local SonarQube analysis
+
+This project uses a local SonarQube Community Build server, separate from GitHub-hosted CI. The existing Docker container is named `sonarqube`; open `http://localhost:9000`, or start it with `docker start sonarqube` if it is stopped. A fresh machine needs its own SonarQube installation first.
+
+First setup:
+
+1. Log into SonarQube and create a local project with key `se327-bookstore-backend` and name `SE327 Bookstore Backend`.
+2. Select the built-in **Sonar way** quality gate for the project. Record the actual conditions shown in SonarQube for the report; they are tool settings, not a course-specified coverage minimum.
+3. Under **My Account > Security**, generate a **Project Analysis Token** for this backend project. Give it an expiry date suitable for the project.
+4. Copy `.env.sonar.example` to `.env.sonar` and paste the token after `SONAR_TOKEN=`. Use unquoted `KEY=value` lines. `.env.sonar` is ignored by Git; never put the token in the POM, screenshots, or report.
+
+With JDK 21 selected, start the application database and run from this backend folder:
+
+```powershell
+docker compose up -d --wait
+.\scripts\sonar.ps1
+```
+
+The script loads local Sonar settings, runs `clean verify`, and then uses the pinned SonarScanner for Maven. It imports `target/site/jacoco/jacoco.xml`. `sonar.qualitygate.wait=true` makes a failed quality gate fail the command. The script restores the previous token/server environment variables when it finishes.
+
+Community Build has one analysis stream per project, without separate feature-branch or pull-request analysis. Analyze the integrated `develop` snapshot consistently after merging. A pre-merge baseline scan can inspect your current working branch, but it replaces the same Sonar project snapshot; the Sonar label is not proof that your Git `main` branch was analyzed. Record the actual Git branch, commit, and any uncommitted source changes with the results.
+
+GitHub-hosted runners cannot reach a SonarQube server on your laptop through `localhost`. Hosted build/test CI stays enabled; this scan is manual. Automatic Sonar analysis would require a separately configured self-hosted runner or a reachable server. If that is added later, store its token in GitHub Actions secrets rather than committing `.env.sonar`.
+
+After a successful scan, open the backend project dashboard and save its gate result, coverage, findings, new-code definition, and selected gate conditions as evidence. Keep genuine findings for review; this setup does not suppress rules or exclude production classes to obtain a passing gate. Until the scan actually runs and returns a result, analysis is only configured.
+
+References: [SonarScanner for Maven](https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/scanners/sonarscanner-for-maven) and [SonarQube token management](https://docs.sonarsource.com/sonarqube-community-build/user-guide/managing-tokens).
 
 ## API errors and frontend access
 
