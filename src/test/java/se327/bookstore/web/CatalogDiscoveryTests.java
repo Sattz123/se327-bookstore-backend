@@ -39,34 +39,34 @@ class CatalogDiscoveryTests {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void paginatesInTheDatabaseWithFifteenBooksAndStableOrdering() throws Exception {
+    void paginatesInTheDatabaseWithSixteenBooksAndStableOrdering() throws Exception {
         Category category = category("Fiction", true);
         var books = new ArrayList<Product>();
-        for (int i = 1; i <= 32; i++) books.add(book(category, "Book " + i, null, true));
+        for (int i = 1; i <= 36; i++) books.add(book(category, "Book " + i, null, true));
         sameCreationTime();
 
         mvc.perform(get("/api/products"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(15))
-                .andExpect(jsonPath("$.content[0].id").value(books.get(31).getId()))
-                .andExpect(jsonPath("$.content[14].id").value(books.get(17).getId()))
+                .andExpect(jsonPath("$.content.length()").value(16))
+                .andExpect(jsonPath("$.content[0].id").value(books.get(35).getId()))
+                .andExpect(jsonPath("$.content[15].id").value(books.get(20).getId()))
                 .andExpect(jsonPath("$.page").value(1))
-                .andExpect(jsonPath("$.size").value(15))
-                .andExpect(jsonPath("$.totalElements").value(32))
+                .andExpect(jsonPath("$.size").value(16))
+                .andExpect(jsonPath("$.totalElements").value(36))
                 .andExpect(jsonPath("$.totalPages").value(3));
         mvc.perform(get("/api/products").param("page", "2"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(15))
-                .andExpect(jsonPath("$.content[0].id").value(books.get(16).getId()))
-                .andExpect(jsonPath("$.content[14].id").value(books.get(2).getId()));
+                .andExpect(jsonPath("$.content.length()").value(16))
+                .andExpect(jsonPath("$.content[0].id").value(books.get(19).getId()))
+                .andExpect(jsonPath("$.content[15].id").value(books.get(4).getId()));
         mvc.perform(get("/api/products").param("page", "3"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(2));
+                .andExpect(jsonPath("$.content.length()").value(4));
         mvc.perform(get("/api/products").param("page", "4"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isEmpty())
                 .andExpect(jsonPath("$.page").value(4))
-                .andExpect(jsonPath("$.totalElements").value(32));
+                .andExpect(jsonPath("$.totalElements").value(36));
     }
 
     @Test
@@ -82,7 +82,7 @@ class CatalogDiscoveryTests {
         mvc.perform(get("/api/products").param("q", "  sPaCe  ")
                         .param("categoryId", science.getId().toString()).param("page", "2"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(3))
+                .andExpect(jsonPath("$.content.length()").value(2))
                 .andExpect(jsonPath("$.content[0].category.id").value(science.getId()))
                 .andExpect(jsonPath("$.totalElements").value(18))
                 .andExpect(jsonPath("$.totalPages").value(2))

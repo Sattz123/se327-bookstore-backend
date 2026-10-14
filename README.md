@@ -97,7 +97,7 @@ The author and formats replace the original JSON attributes with typed fields an
 
 | Request | Response |
 | --- | --- |
-| `GET /api/products?q=...&categoryId=...&page=1` | A page of visible books; 15 per page |
+| `GET /api/products?q=...&categoryId=...&page=1` | A page of visible books; 16 per page |
 | `GET /api/products/featured` | The newest eight visible books for the home page |
 | `GET /api/products/{id}` | One visible book, or a ProblemDetail 404 when absent/hidden |
 | `GET /api/categories` | Visible categories ordered by ID, including empty categories |

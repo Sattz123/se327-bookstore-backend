@@ -82,6 +82,25 @@ class DevelopmentSeedTests {
     }
 
     @Test
+    void restoresTheMissingSampleCoverWithoutOverwritingACustomCover() throws java.io.IOException {
+        String repair = new ClassPathResource("dev/db/migration/V14__restore_missing_algorithms_cover.sql")
+                .getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        Long version = jdbcTemplate.queryForObject("SELECT version FROM products WHERE id = 60", Long.class);
+        jdbcTemplate.update("DELETE FROM product_images WHERE product_id = 60");
+        jdbcTemplate.execute(repair);
+        assertThat(jdbcTemplate.queryForObject("SELECT image_url FROM product_images WHERE product_id = 60", String.class))
+                .isEqualTo("/images/products/sci-tech-12.png");
+        assertThat(jdbcTemplate.queryForObject("SELECT version FROM products WHERE id = 60", Long.class))
+                .isEqualTo(version + 1);
+        jdbcTemplate.update("UPDATE product_images SET image_url = '/images/custom.jpg' WHERE product_id = 60");
+        jdbcTemplate.execute(repair);
+        assertThat(jdbcTemplate.queryForObject("SELECT image_url FROM product_images WHERE product_id = 60", String.class))
+                .isEqualTo("/images/custom.jpg");
+        assertThat(jdbcTemplate.queryForObject("SELECT version FROM products WHERE id = 60", Long.class))
+                .isEqualTo(version + 1);
+    }
+
+    @Test
     void doesNotReapplyTheSeedOrOverwriteAnEditedBook() {
         jdbcTemplate.update("UPDATE products SET name = 'Edited title', stock_quantity = 3 WHERE id = 1");
 
