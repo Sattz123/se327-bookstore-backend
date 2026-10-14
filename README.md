@@ -337,3 +337,17 @@ and customer counts exclude administrators. These are record counts, not paid re
 Recent orders use saved order totals and current customer names, newest first with ID as
 a tie-breaker. Counts and rows use one repeatable-read snapshot; an empty store returns
 zero counts and an empty list. No schema migration is required.
+
+## Administrator profile (Stage 19)
+
+ADMIN-only `GET /api/admin/profile`, `PUT /api/admin/profile` and
+`PUT /api/admin/profile/password` reuse the existing profile service and request DTOs.
+The account always comes from the authenticated principal, never a submitted ID or
+role. Profile changes accept username, email, optional phone and avatarUrl, check
+email uniqueness and return `{ token, user }`; clients must replace the JWT after an
+email change. Password changes accept currentPassword/newPassword, verify the current
+hash, reject reuse, and use the shared 6–100 character validation. Password hashes
+are never returned. This retains existing JWT expiry behavior: changing a password
+does not revoke already-issued tokens. No database migration is required.
+
+Merge `feature/admin-dashboard` into develop before `feature/admin-profile`.
