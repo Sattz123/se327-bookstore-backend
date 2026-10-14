@@ -292,6 +292,14 @@ Create/edit fields: `name`, optional `description`/`author`, `price`, `stockQuan
 
 DELETE always archives (`visible=false`), retaining the product, cart/wishlist references, and purchase snapshots. Archived books can be restored by changing visibility. Public catalog/detail endpoints continue to require both the product and its category to be visible. Image URLs are preserved during edits; upload management is Stage 16.
 
+## Product images (Stage 16)
+
+Admin-only POST `/api/admin/products/{id}/images?version=...` accepts one multipart `file`; POST `/{index}?version=...` replaces an image and DELETE `/{index}?version=...` removes it (zero-based index). Each returns the updated admin product/version. Maximum five images per book; the first is the cover. Images must be PNG/JPEG, at most 5 MB, and at most 4096×4096 pixels. The server verifies MIME type and decoded contents, re-encodes the image, and generates a UUID filename. Stale versions return 409.
+
+Files persist in the ignored `uploads/products` folder, configurable through `PRODUCT_IMAGE_DIRECTORY`. Keep this directory when restarting/redeploying the backend; use the same absolute directory if changing the working directory. Public URLs are `/images/uploads/products/{generated-name}` and work without authentication. Missing files return 404; the frontend cover component shows a fallback. Existing development covers still work.
+
+Database changes and product version checks use the existing product lock. Rollbacks remove newly written files; replacements/removals delete only managed upload files after a successful commit. Development seed images are not deleted. Back up the upload directory alongside the database. New image URLs use long-lived caching; replacements get a new filename.
+
 ## Stop local services
 
 Stop the backend using IntelliJ's Stop button or Ctrl+C in its terminal. Stop PostgreSQL without deleting its stored data:
