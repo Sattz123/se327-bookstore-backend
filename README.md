@@ -1,5 +1,15 @@
 # Bookstore backend
 
+## Simulated payment methods (Stage 10)
+
+Authenticated `GET /api/payment-methods`, `POST /api/payment-methods`, `PUT /api/payment-methods/{id}/default`, and `DELETE /api/payment-methods/{id}` manage only the current user's records. Create returns 201, delete 204, and missing/foreign IDs 404. The existing controller/service/DAO/repository structure is retained.
+
+Create JSON: `provider` (required, max 50), `cardholderName` (required, max 100), `lastFour` (exactly four digits), `expiryMonth` (1–12), `expiryYear` (2000–9999), and `isDefault` (optional boolean, default false). Past expiry months are rejected; the current UTC month remains valid. Responses include the ID, provider/name, `cardNumberMasked`, expiry, default flag, and creation time. This is a simulated payment flow: no gateway, full card number, CVV, or payment credentials are collected/stored.
+
+Migration V8 adds `payment_methods`. A partial unique index and the same user-row locking used for addresses enforce at most one default per user. Default changes are transactional and check ownership before clearing the previous selection. Deleting the default leaves none; other methods are not promoted. Repeatedly selecting the same default is safe. Restarting the backend applies V8; existing migrations remain unchanged.
+
+Surefire limits each test-context connection pool to three connections with no minimum idle pool. This prevents the growing suite of isolated schemas from exhausting PostgreSQL's default connection limit; normal application pools are unchanged.
+
 ## Address book (Stage 9)
 
 Authenticated users manage their own delivery addresses through the existing lab-style layers. Flyway `V7__create_addresses.sql` adds `addresses` with an owner foreign key and a PostgreSQL partial unique index allowing at most one default per user.
