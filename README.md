@@ -52,16 +52,37 @@ Start PostgreSQL before running all tests, because the generated application-con
 ```powershell
 docker compose up -d --wait
 .\mvnw.cmd test
-.\mvnw.cmd package
+.\mvnw.cmd clean verify
 ```
 
 The web tests can run separately without PostgreSQL:
 
 ```powershell
-.\mvnw.cmd "-Dtest=WebFoundationTests" test
+.\mvnw.cmd "-Dtest=WebFoundationTests,CorsOriginOverrideTests" test
 ```
 
-They check request validation, malformed JSON, missing routes, unexpected errors, and allowed/rejected CORS origins. Their example endpoints only exist during tests.
+They check request validation, malformed/missing JSON, missing routes, unsupported methods/content types, unexpected errors, and allowed/rejected CORS origins, methods, and headers. They also verify changing the allowed origin and preserving CORS headers on error responses. Their example endpoints and mocked dependency only exist during tests.
+
+### JUnit, Mockito, and coverage
+
+The Spring Boot web MVC test starter already provides JUnit Jupiter, Mockito, and Spring's MVC test tools. Versions are managed by Spring Boot. `@MockitoBean` replaces a dependency in the web test context so a test can simulate an unexpected failure and check the public error response.
+
+Maven Surefire loads both Mockito's Java agent (for Java 21 inline mocking) and JaCoCo's coverage agent. The Maven dependency plugin resolves the Mockito jar path; JaCoCo supplies its agent argument separately so both remain active. IntelliJ's native JUnit runner does not use Surefire settings; use the Maven commands for this project's coverage reports.
+
+Run `clean verify` for a fresh build, all tests, and coverage reports. `test` runs tests and collects execution data, but HTML/XML reports are generated in the later `verify` phase.
+
+| Output | Path |
+| --- | --- |
+| Test results | `target/surefire-reports/` |
+| HTML coverage report | `target/site/jacoco/index.html` |
+| XML coverage report for later SonarQube setup | `target/site/jacoco/jacoco.xml` |
+| CSV coverage counters | `target/site/jacoco/jacoco.csv` |
+
+Reports stay under the Git-ignored `target` folder. No production classes are excluded and no coverage threshold is imposed yet. This stage prepares local testing; CI and SonarQube are separate later steps.
+
+JaCoCo reports bytecode instruction, line, and branch coverage; its instruction counter is not a Java source statement counter. The current production classes have no conditional branches, so branch coverage is not applicable until business conditions are implemented. Do not report this as 100% branch coverage. This foundation report is only a baseline for the small amount of code currently implemented.
+
+References: [JaCoCo Maven plugin](https://www.jacoco.org/jacoco/trunk/doc/maven.html), [JaCoCo counters](https://www.jacoco.org/jacoco/trunk/doc/counters.html), and [Mockito Java 21 agent setup](https://javadoc.io/static/org.mockito/mockito-core/5.23.0/org.mockito/org/mockito/Mockito.html#0.3).
 
 ## API errors and frontend access
 
