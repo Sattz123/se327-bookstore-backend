@@ -17,7 +17,7 @@ docker compose up -d --wait
 
 Alternatively, run `BookstoreBackendApplication` in IntelliJ after starting the database. Set the run configuration's working directory to this backend folder so Spring Boot can read `.env`.
 
-The backend uses `http://localhost:8080`. There are no bookstore endpoints yet, so opening `/` returns a 404. Future API routes use `/api/**`.
+The backend uses `http://localhost:8080`. Bookstore API routes use `/api/**`; opening `/` still returns a 404.
 
 If the terminal uses another Java version, set JDK 21 for that terminal first (adjust the installation path if necessary):
 
@@ -59,7 +59,20 @@ The first migration, `V1__create_catalog_tables.sql`, adds four tables:
 
 `Category` and `Product` are JPA entities in the `entity` folder. Images and formats use `@ElementCollection`, similar to the lab's image lists. Prices use `BigDecimal` and PostgreSQL `NUMERIC(10, 2)`. Database constraints reject negative prices/stock, unknown formats, and invalid image positions. Category deletion is blocked while products still reference it; deleting a product removes its own image/format rows.
 
-The author and formats replace the original JSON attributes with typed fields and a related table. Visibility and stock remain separate fields. Catalog APIs and uploads are added in later steps.
+The author and formats replace the original JSON attributes with typed fields and a related table. Visibility and stock remain separate fields. Uploads are added in a later stage.
+
+### Public catalog API
+
+| Request | Response |
+| --- | --- |
+| `GET /api/products` | An array of visible books, ordered by ID; `[]` for an empty catalog |
+| `GET /api/products/{id}` | One visible book, or a ProblemDetail 404 when absent/hidden |
+
+Both routes require a visible category as well as a visible book. Out-of-stock books remain listed with `stockQuantity: 0`. Invalid or nonpositive IDs return 400. Search and pagination come in Stage 4.
+
+The lab-style flow is `ProductController` → `ProductService`/`ProductServiceImpl` → `ProductDao`/`ProductDaoImpl` → `ProductRepository`. The service maps entities to DTOs inside a read-only transaction, so lazy collections work with Open Session in View disabled. Responses include `id`, `name`, `description`, `price`, `author`, `stockQuantity`, a nested category (`id`, `name`, `imageUrl`), ordered `images`, and `formats` using the enum names. Internal visibility flags and persistence timestamps are not exposed.
+
+Image references such as `/images/products/fiction-01.png` are relative to the backend origin, not the frontend's origin. Local sample images require the `dev` profile.
 
 The first startup creates these tables in an empty application database and records the migration in `flyway_schema_history`. Later startups validate the migration history and only apply new versions. Keep applied migrations unchanged; add a new numbered migration for later schema changes. Existing databases with manually created catalog tables need an explicit migration plan rather than enabling Flyway baselining or dropping data automatically.
 
