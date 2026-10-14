@@ -303,6 +303,94 @@ class PasswordRecoveryControllerTests {
     }
 
     @Test
+    void verifiesUsedTokenReturnsValidFalse() throws Exception {
+        User user = User.builder()
+                .username("Used Token User")
+                .email("usedtoken@example.com")
+                .passwordHash(passwordEncoder.encode("Pass123!"))
+                .role(Role.CUSTOMER)
+                .build();
+        userDao.save(user);
+
+        PasswordResetToken token = PasswordResetToken.builder()
+                .token("used-verify-token")
+                .user(user)
+                .expiryDate(Instant.now().plus(30, ChronoUnit.MINUTES))
+                .used(true)
+                .build();
+        passwordResetTokenDao.save(token);
+
+        mvc.perform(get("/api/auth/verify-reset-token")
+                        .param("token", "used-verify-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(false))
+                .andExpect(jsonPath("$.message").value("Password reset token has already been used."));
+    }
+
+    @Test
+    void verifiesExpiredTokenReturnsValidFalse() throws Exception {
+        User user = User.builder()
+                .username("Expired Verify User")
+                .email("expiredverify@example.com")
+                .passwordHash(passwordEncoder.encode("Pass123!"))
+                .role(Role.CUSTOMER)
+                .build();
+        userDao.save(user);
+
+        PasswordResetToken token = PasswordResetToken.builder()
+                .token("expired-verify-token")
+                .user(user)
+                .expiryDate(Instant.now().minus(10, ChronoUnit.MINUTES))
+                .used(false)
+                .build();
+        passwordResetTokenDao.save(token);
+
+        mvc.perform(get("/api/auth/verify-reset-token")
+                        .param("token", "expired-verify-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(false))
+                .andExpect(jsonPath("$.message").value("Password reset token has expired."));
+    }
+
+    @Test
+    void verifiesBlankTokenReturnsValidFalse() throws Exception {
+        mvc.perform(get("/api/auth/verify-reset-token")
+                        .param("token", ""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(false))
+                .andExpect(jsonPath("$.message").value("Invalid password reset token."));
+    }
+
+    @Test
+    void rejectsPasswordResetWhenTokenIsBlank() throws Exception {
+        Map<String, String> request = Map.of(
+                "token", "",
+                "newPassword", "ValidPassword123!"
+        );
+
+        mvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.errors").isArray());
+    }
+
+    @Test
+    void rejectsForgotPasswordRequestWithBlankEmail() throws Exception {
+        Map<String, String> badRequest = Map.of("email", "  ");
+
+        mvc.perform(post("/api/auth/forgot-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(badRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.errors").isArray());
+    }
+
+    @Test
     void rejectsForgotPasswordRequestWithInvalidEmail() throws Exception {
         Map<String, String> badRequest = Map.of("email", "not-an-email");
 
