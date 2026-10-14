@@ -30,6 +30,10 @@ public class Category {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @jakarta.persistence.Version
+    @Column(nullable = false)
+    private long version;
+
     @NotBlank
     @Size(max = 100)
     @Column(nullable = false, length = 100)

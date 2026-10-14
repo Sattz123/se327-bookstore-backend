@@ -67,4 +67,5 @@ public class ProductDaoImpl implements ProductDao {
     }
     @Override public Optional<Product> findById(Long id) { return productRepository.findById(id); }
     @Override public Product save(Product product) { return productRepository.saveAndFlush(product); }
+    @Override public long countByCategoryId(Long categoryId) { return productRepository.countByCategoryId(categoryId); }
 }

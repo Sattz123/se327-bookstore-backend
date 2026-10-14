@@ -16,4 +16,5 @@ public interface ProductDao {
     Page<Product> findAdminProducts(String query, Long categoryId, Boolean visible, Pageable pageable);
     Optional<Product> findById(Long id);
     Product save(Product product);
+    long countByCategoryId(Long categoryId);
 }
