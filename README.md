@@ -308,6 +308,10 @@ Responses include product count, visibility and optimistic version. V12 adds cat
 
 Category uploads reuse the validated persistent image store. A rollback removes a newly uploaded file. Previously saved category cover files are retained on replacement/removal/deletion because image URLs may be shared by other records. Retain and back up the image directory with the database.
 
+## Administrator customer listing (Stage 18)
+
+`GET /api/admin/customers?q=...&page=1` is admin-only and read-only. It lists customers (excluding administrators), newest first, with name, email, phone, join date, order count and total order value. Search matches literal name/email text case-insensitively; pages contain 20 entries. Cancelled orders are excluded from order count/value, matching the original customer-list scope. Pending orders are included, so total value is not a paid-revenue figure. Password hashes, reset tokens and JWTs are never returned.
+
 ## Stop local services
 
 Stop the backend using IntelliJ's Stop button or Ctrl+C in its terminal. Stop PostgreSQL without deleting its stored data:
