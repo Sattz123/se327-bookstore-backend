@@ -38,4 +38,12 @@ public class UserDaoImpl implements UserDao {
         }
         return userRepository.existsByEmailIgnoreCase(email.strip());
     }
+
+    @Override
+    public boolean existsByEmailAndIdNot(String email, Long id) {
+        if (email == null || email.isBlank() || id == null) {
+            return false;
+        }
+        return userRepository.existsByEmailIgnoreCaseAndIdNot(email.strip(), id);
+    }
 }
