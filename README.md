@@ -78,11 +78,25 @@ Run `clean verify` for a fresh build, all tests, and coverage reports. `test` ru
 | XML coverage report for later SonarQube setup | `target/site/jacoco/jacoco.xml` |
 | CSV coverage counters | `target/site/jacoco/jacoco.csv` |
 
-Reports stay under the Git-ignored `target` folder. No production classes are excluded and no coverage threshold is imposed yet. This stage prepares local testing; CI and SonarQube are separate later steps.
+Reports stay under the Git-ignored `target` folder. No production classes are excluded and no coverage threshold is imposed yet. SonarQube will be configured in a later step.
 
 JaCoCo reports bytecode instruction, line, and branch coverage; its instruction counter is not a Java source statement counter. The current production classes have no conditional branches, so branch coverage is not applicable until business conditions are implemented. Do not report this as 100% branch coverage. This foundation report is only a baseline for the small amount of code currently implemented.
 
 References: [JaCoCo Maven plugin](https://www.jacoco.org/jacoco/trunk/doc/maven.html), [JaCoCo counters](https://www.jacoco.org/jacoco/trunk/doc/counters.html), and [Mockito Java 21 agent setup](https://javadoc.io/static/org.mockito/mockito-core/5.23.0/org.mockito/org/mockito/Mockito.html#0.3).
+
+## GitHub Actions CI
+
+`.github/workflows/backend-ci.yml` runs on pushes to any branch and on pull requests targeting `develop` or `main`.
+
+The single job checks out the backend, sets up Temurin JDK 21 with Maven caching, and starts a temporary PostgreSQL 17 service. It runs `sh ./mvnw --batch-mode --no-transfer-progress clean verify` to compile, test, package the application, and generate JaCoCo reports. Invoking the wrapper through `sh` also works when its executable bit was not set in Git on Windows.
+
+Database settings come from the workflow's environment. The CI password is only for the temporary service created during that run; no repository secrets or local `.env` are needed.
+
+After committing this change, push `chore/quality-setup` using Fork. Open the backend repository's **Actions** tab on GitHub and select **Backend CI**. Review the **build-and-test** job and download **backend-test-reports** to inspect the test results and HTML/XML coverage reports. Reports are retained for seven days, and the upload step also runs after test failures so available failure reports can be inspected.
+
+A failed build or test fails the job. This workflow does not yet perform SonarQube analysis or enforce a coverage percentage. Save an actual successful GitHub run as CI evidence after pushing; local verification alone is not a GitHub Actions result.
+
+Reference: [GitHub's Maven CI guide](https://docs.github.com/en/actions/tutorials/build-and-test-code/java-with-maven) and [PostgreSQL service containers](https://docs.github.com/en/actions/tutorials/use-containerized-services/create-postgresql-service-containers).
 
 ## API errors and frontend access
 
