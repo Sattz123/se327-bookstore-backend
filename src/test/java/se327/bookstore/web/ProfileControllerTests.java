@@ -305,4 +305,76 @@ class ProfileControllerTests {
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.errors").isArray());
     }
+    @Test
+    void rejectsUpdatingProfileWithoutToken() throws Exception {
+        UpdateProfileRequest request = new UpdateProfileRequest("New Name", "new@example.com", null, null);
+        mvc.perform(put("/api/profile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(401));
+    }
+
+    @Test
+    void rejectsChangingPasswordWithoutToken() throws Exception {
+        ChangePasswordRequest request = new ChangePasswordRequest("Current123!", "NewPass123!");
+        mvc.perform(put("/api/profile/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(401));
+    }
+
+    @Test
+    void rejectsProfileUpdateWithBlankUsernameOrInvalidEmail() throws Exception {
+        User user = User.builder()
+                .username("Valid User")
+                .email("valid@example.com")
+                .passwordHash(passwordEncoder.encode("Password123!"))
+                .role(Role.CUSTOMER)
+                .build();
+        userDao.save(user);
+
+        String token = jwtTokenService.generateToken(user);
+
+        UpdateProfileRequest badRequest = new UpdateProfileRequest("", "not-an-email", null, null);
+
+        mvc.perform(put("/api/profile")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(badRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.errors").isArray());
+    }
+
+    @Test
+    void rejectsPasswordChangeWhenCurrentPasswordIsBlank() throws Exception {
+        User user = User.builder()
+                .username("Blank Current User")
+                .email("blankcurrent@example.com")
+                .passwordHash(passwordEncoder.encode("CurrentPass123!"))
+                .role(Role.CUSTOMER)
+                .build();
+        userDao.save(user);
+
+        String token = jwtTokenService.generateToken(user);
+
+        Map<String, String> request = Map.of(
+                "currentPassword", "",
+                "newPassword", "ValidNewPass123!"
+        );
+
+        mvc.perform(put("/api/profile/password")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.errors").isArray());
+    }
 }
