@@ -22,4 +22,7 @@ public class CategoryDaoImpl implements CategoryDao {
     public Optional<Category> findVisibleCategoryById(Long id) {
         return categoryRepository.findByIdAndVisibleTrue(id);
     }
+
+    @Override public Optional<Category> findById(Long id) { return categoryRepository.findById(id); }
+    @Override public List<Category> findAll() { return categoryRepository.findAll(org.springframework.data.domain.Sort.by("name", "id")); }
 }

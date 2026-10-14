@@ -48,4 +48,23 @@ public class ProductDaoImpl implements ProductDao {
     public Optional<Product> findByIdForUpdate(Long id) {
         return productRepository.findByIdForUpdate(id);
     }
+
+    @Override
+    public Page<Product> findAdminProducts(String query, Long categoryId, Boolean visible, Pageable pageable) {
+        Specification<Product> filters = (root, criteriaQuery, cb) -> {
+            var predicates = new ArrayList<Predicate>();
+            if (visible != null) predicates.add(cb.equal(root.get("visible"), visible));
+            if (categoryId != null) predicates.add(cb.equal(root.get("category").get("id"), categoryId));
+            if (!query.isBlank()) {
+                String pattern = "%" + query.toLowerCase(Locale.ROOT)
+                        .replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+                predicates.add(cb.or(cb.like(cb.lower(root.get("name")), pattern, '\\'),
+                        cb.like(cb.lower(root.get("author")), pattern, '\\')));
+            }
+            return cb.and(predicates.toArray(Predicate[]::new));
+        };
+        return productRepository.findAll(filters, pageable);
+    }
+    @Override public Optional<Product> findById(Long id) { return productRepository.findById(id); }
+    @Override public Product save(Product product) { return productRepository.saveAndFlush(product); }
 }

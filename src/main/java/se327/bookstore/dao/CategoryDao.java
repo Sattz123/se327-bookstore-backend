@@ -9,4 +9,7 @@ public interface CategoryDao {
     List<Category> findVisibleCategories();
 
     Optional<Category> findVisibleCategoryById(Long id);
+
+    Optional<Category> findById(Long id);
+    List<Category> findAll();
 }
