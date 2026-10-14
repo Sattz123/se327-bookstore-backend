@@ -43,11 +43,28 @@ Both Docker Compose and Spring Boot read this backend folder's `.env`. Commit `.
 
 PostgreSQL data is stored in a Docker named volume and survives container restarts and `docker compose down`. Database name/user/password settings initialize a new volume; changing `.env` later does not change an existing database's credentials. Keep the original settings or explicitly update the database to match.
 
-JPA currently uses `ddl-auto=none`: it connects without creating or deleting tables. Versioned migrations will be introduced with the product data model.
+Flyway runs versioned SQL migrations from `src/main/resources/db/migration` when the application starts. JPA uses `ddl-auto=validate` to check the resulting schema rather than create or update tables itself.
+
+### Catalog data model
+
+The first migration, `V1__create_catalog_tables.sql`, adds four tables:
+
+| Table | Purpose |
+| --- | --- |
+| `categories` | Category name, image reference, visibility, and creation time |
+| `products` | Category reference, book name/description, author, decimal price, stock, visibility, and timestamps |
+| `product_images` | Up to five ordered image references per book |
+| `product_formats` | Available Paperback, Hardcover, E-book, and Audiobook formats |
+
+`Category` and `Product` are JPA entities in the `entity` folder. Images and formats use `@ElementCollection`, similar to the lab's image lists. Prices use `BigDecimal` and PostgreSQL `NUMERIC(10, 2)`. Database constraints reject negative prices/stock, unknown formats, and invalid image positions. Category deletion is blocked while products still reference it; deleting a product removes its own image/format rows.
+
+The author and formats replace the original JSON attributes with typed fields and a related table. Visibility and stock remain separate fields. No catalog APIs, uploads, or development seed data are added in this step.
+
+The first startup creates these tables in an empty application database and records the migration in `flyway_schema_history`. Later startups validate the migration history and only apply new versions. Keep applied migrations unchanged; add a new numbered migration for later schema changes. Existing databases with manually created catalog tables need an explicit migration plan rather than enabling Flyway baselining or dropping data automatically.
 
 ## Tests and build
 
-Start PostgreSQL before running all tests, because the generated application-context test connects to the real local database:
+Start PostgreSQL before running all tests, because the application-context and catalog persistence tests connect to the real local database:
 
 ```powershell
 docker compose up -d --wait
@@ -62,6 +79,8 @@ The web tests can run separately without PostgreSQL:
 ```
 
 They check request validation, malformed/missing JSON, missing routes, unsupported methods/content types, unexpected errors, and allowed/rejected CORS origins, methods, and headers. They also verify changing the allowed origin and preserving CORS headers on error responses. Their example endpoints and mocked dependency only exist during tests.
+
+`CatalogPersistenceTests` verifies the migrated schema with PostgreSQL, entity/collection persistence, stock/visibility updates, database constraints, and repeat migration behavior. Its test data is rolled back after each test.
 
 ### JUnit, Mockito, and coverage
 
@@ -80,7 +99,7 @@ Run `clean verify` for a fresh build, all tests, and coverage reports. `test` ru
 
 Reports stay under the Git-ignored `target` folder. No production classes are excluded and no Maven coverage threshold is imposed. The local SonarQube analysis below checks the selected server-side quality gate.
 
-JaCoCo reports bytecode instruction, line, and branch coverage; its instruction counter is not a Java source statement counter. The current production classes have no conditional branches, so branch coverage is not applicable until business conditions are implemented. Do not report this as 100% branch coverage. This foundation report is only a baseline for the small amount of code currently implemented.
+JaCoCo reports bytecode instruction, line, and branch coverage; its instruction counter is not a Java source statement counter. If a report has no branch counter, report branch coverage as not applicable rather than 100%. Coverage at this stage only describes the implemented foundation and catalog model, not the future bookstore workflows.
 
 References: [JaCoCo Maven plugin](https://www.jacoco.org/jacoco/trunk/doc/maven.html), [JaCoCo counters](https://www.jacoco.org/jacoco/trunk/doc/counters.html), and [Mockito Java 21 agent setup](https://javadoc.io/static/org.mockito/mockito-core/5.23.0/org.mockito/org/mockito/Mockito.html#0.3).
 
