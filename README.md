@@ -18,6 +18,10 @@ The owner always comes from the authenticated principal. Missing or another user
 
 `AddressControllerTests` exercises the authenticated API with JWT and PostgreSQL in a separate `address_api_test` schema; fixtures roll back. Existing local startup instructions still apply, and the next application startup applies V7 automatically.
 
+Stage 9 regression tests cover required/overlong fields, invalid IDs, empty and private lists, cross-user edit/delete/default attempts, switching/repeating/clearing defaults, and deleting default/non-default addresses. `AddressPersistenceTests` checks the PostgreSQL partial unique index and user-deletion cascade in its own schema. `AddressConcurrencyTests` runs two real transactions simultaneously and verifies both default changes succeed with exactly one final default; it removes its committed test user afterward.
+
+Spring method validation (used when a route also validates its path ID) now returns the same `errors: [{field, message}]` shape as request-body validation. This keeps create and edit form error messages consistent.
+
 Spring Boot backend for the bookstore reimplementation. Requires JDK 21 and Docker Desktop with Linux containers. Maven is provided by the wrapper.
 
 ## Local setup
