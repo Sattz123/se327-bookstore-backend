@@ -65,10 +65,17 @@ The author and formats replace the original JSON attributes with typed fields an
 
 | Request | Response |
 | --- | --- |
-| `GET /api/products` | An array of visible books, ordered by ID; `[]` for an empty catalog |
+| `GET /api/products?q=...&categoryId=...&page=1` | A page of visible books; 15 per page |
+| `GET /api/products/featured` | The newest eight visible books for the home page |
 | `GET /api/products/{id}` | One visible book, or a ProblemDetail 404 when absent/hidden |
+| `GET /api/categories` | Visible categories ordered by ID, including empty categories |
+| `GET /api/categories/{id}` | One visible category; absent/hidden categories return 404 |
 
-Both routes require a visible category as well as a visible book. Out-of-stock books remain listed with `stockQuantity: 0`. Invalid or nonpositive IDs return 400. Search and pagination come in Stage 4.
+All product routes require a visible category as well as a visible book. Out-of-stock books remain listed with `stockQuantity: 0`. Invalid or nonpositive IDs return 400.
+
+Stage 4 changes the product list response from a plain array to `{content, page, size, totalElements, totalPages}`. Pages start at **1**, use a fixed size of **15**, and sort by creation time descending then ID descending for ties. A page past the last returns empty `content` with the real totals. Empty results have `totalPages: 0`. Page numbers outside 1–1,000,000 or nonnumeric values return 400.
+
+Optional `q` searches title or author using a case-insensitive substring (trimmed, maximum 100 characters). `%`, `_`, and backslashes are literal search characters. `categoryId` combines with search; a missing/hidden category returns 404. For example, `/api/products?q=harry&categoryId=2&page=1`. The featured section uses the same newest-first ordering, capped at eight, following the original home controller rather than adding a separate editorial flag. No schema migration is needed for these queries.
 
 The lab-style flow is `ProductController` → `ProductService`/`ProductServiceImpl` → `ProductDao`/`ProductDaoImpl` → `ProductRepository`. The service maps entities to DTOs inside a read-only transaction, so lazy collections work with Open Session in View disabled. Responses include `id`, `name`, `description`, `price`, `author`, `stockQuantity`, a nested category (`id`, `name`, `imageUrl`), ordered `images`, and `formats` using the enum names. Internal visibility flags and persistence timestamps are not exposed.
 

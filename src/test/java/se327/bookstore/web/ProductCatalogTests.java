@@ -44,18 +44,18 @@ class ProductCatalogTests {
     private EntityManager entityManager;
 
     @Test
-    void listsBooksInIdOrderUsingPublicDtos() throws Exception {
+    void listsNewestBooksUsingPublicDtos() throws Exception {
         Product first = saveBook("First book");
         Product second = saveBook("Second book");
 
         mvc.perform(get("/api/products"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].id").value(first.getId()))
-                .andExpect(jsonPath("$[1].id").value(second.getId()))
-                .andExpect(jsonPath("$[0].category.name").value("Test category"))
-                .andExpect(jsonPath("$[0].visible").doesNotExist())
-                .andExpect(jsonPath("$[0].category.visible").doesNotExist());
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].id").value(second.getId()))
+                .andExpect(jsonPath("$.content[1].id").value(first.getId()))
+                .andExpect(jsonPath("$.content[0].category.name").value("Test category"))
+                .andExpect(jsonPath("$.content[0].visible").doesNotExist())
+                .andExpect(jsonPath("$.content[0].category.visible").doesNotExist());
     }
 
     @Test
@@ -122,15 +122,15 @@ class ProductCatalogTests {
 
         mvc.perform(get("/api/products"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].stockQuantity").value(0));
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].stockQuantity").value(0));
         mvc.perform(get("/api/products/{id}", book.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.stockQuantity").value(0));
     }
 
     @Test
-    void returnsAnEmptyArrayForAnEmptyCatalog() throws Exception {
+    void returnsAnEmptyPageForAnEmptyCatalog() throws Exception {
         expectEmptyList();
     }
 
@@ -178,7 +178,8 @@ class ProductCatalogTests {
     private void expectEmptyList() throws Exception {
         mvc.perform(get("/api/products"))
                 .andExpect(status().isOk())
-                .andExpect(content().json("[]"));
+                .andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.totalElements").value(0));
     }
 
     private void expectMissing(Long id) throws Exception {

@@ -2,11 +2,12 @@ package se327.bookstore.dao;
 
 import se327.bookstore.entity.Product;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.util.Optional;
 
 public interface ProductDao {
-    List<Product> findVisibleProducts();
+    Page<Product> findVisibleProducts(String query, Long categoryId, Pageable pageable);
 
     Optional<Product> findVisibleProductById(Long id);
 }
