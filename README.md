@@ -284,6 +284,14 @@ All `/api/admin/**` endpoints require the database-backed `ADMIN` role: missing/
 
 The existing `dev` profile seed supplies a local demonstration administrator. For a separate administrator without demo data, add these settings to your ignored backend `.env`: `APP_ADMIN_BOOTSTRAP_ENABLED=true`, `APP_ADMIN_BOOTSTRAP_EMAIL`, `APP_ADMIN_BOOTSTRAP_USERNAME` (optional), and `APP_ADMIN_BOOTSTRAP_PASSWORD`. Start the backend once, then remove the bootstrap settings. Email, username and password follow registration validation; the password is BCrypt-hashed. Bootstrap is disabled by default, refuses to promote an existing customer, and leaves an existing administrator's password/profile unchanged. There is no public administrator-registration API.
 
+## Administrator products (Stage 15)
+
+All endpoints below require `ADMIN`. `/api/admin/products` supports GET (paged list, `q`, `categoryId`, `visible`, `page`) and POST (create). `GET /api/admin/products/categories` includes hidden categories for selection. `/api/admin/products/{id}` supports GET, PUT (full edit), and DELETE (archive). PATCH `/{id}/inventory` accepts `{ stockQuantity, version }`; PATCH `/{id}/visibility` accepts `{ visible, version }`.
+
+Create/edit fields: `name`, optional `description`/`author`, `price`, `stockQuantity`, `categoryId`, nonempty `formats`, and `visible`. Editing also requires the returned `version`; DELETE takes it as `?version=...`. Prices allow up to eight integer digits and two decimal places; stock is a nonnegative integer. Version conflicts return 409 with instructions to reload. Migration V11 adds optimistic versions, also advanced by checkout stock deductions. Writes lock the same product rows as checkout to avoid overwriting concurrent sales.
+
+DELETE always archives (`visible=false`), retaining the product, cart/wishlist references, and purchase snapshots. Archived books can be restored by changing visibility. Public catalog/detail endpoints continue to require both the product and its category to be visible. Image URLs are preserved during edits; upload management is Stage 16.
+
 ## Stop local services
 
 Stop the backend using IntelliJ's Stop button or Ctrl+C in its terminal. Stop PostgreSQL without deleting its stored data:

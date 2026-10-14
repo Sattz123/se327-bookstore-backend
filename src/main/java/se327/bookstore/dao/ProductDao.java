@@ -12,4 +12,8 @@ public interface ProductDao {
     Optional<Product> findVisibleProductById(Long id);
 
     Optional<Product> findByIdForUpdate(Long id);
+
+    Page<Product> findAdminProducts(String query, Long categoryId, Boolean visible, Pageable pageable);
+    Optional<Product> findById(Long id);
+    Product save(Product product);
 }
