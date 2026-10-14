@@ -260,6 +260,12 @@ Adding the same product/format increases its quantity; different formats are sep
 
 Migration V9 adds cart storage and enforces one row per customer/product/format.
 
+## Order storage (Stage 12)
+
+Migration V10 adds `orders` and `order_items`. Order lines preserve the purchased title, format, quantity, unit price and line total. Recipient, delivery address, phone, and masked payment display are also snapshots; changing or deleting a saved address, card, or catalog product cannot change an existing order. Product IDs in order lines are references without a foreign key so product removal does not erase purchase history.
+
+Cash on delivery uses `PENDING`; simulated card completion uses `COMPLETED`. No real payment is processed. A unique checkout UUID per customer prevents duplicate order records.
+
 ## Stop local services
 
 Stop the backend using IntelliJ's Stop button or Ctrl+C in its terminal. Stop PostgreSQL without deleting its stored data:
