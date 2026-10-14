@@ -17,7 +17,7 @@ docker compose up -d --wait
 
 Alternatively, run `BookstoreBackendApplication` in IntelliJ after starting the database. Set the run configuration's working directory to this backend folder so Spring Boot can read `.env`.
 
-The backend uses `http://localhost:8080`. There are no bookstore endpoints yet, so opening `/` returns a 404. Future API routes use `/api/**`.
+The backend uses `http://localhost:8080`. Bookstore API routes use `/api/**`; opening `/` still returns a 404.
 
 If the terminal uses another Java version, set JDK 21 for that terminal first (adjust the installation path if necessary):
 
@@ -38,16 +38,63 @@ Both Docker Compose and Spring Boot read this backend folder's `.env`. Commit `.
 | `POSTGRES_USER` | `bookstore` | Database user |
 | `POSTGRES_PASSWORD` | `bookstore_dev` | Local development password |
 | `FRONTEND_ORIGIN` | `http://localhost:5173` | Exact frontend origin allowed by CORS, without a trailing slash |
+| `SPRING_PROFILES_ACTIVE` | `dev` | Enable the local sample catalog and its cover images; leave unset in production/hosted CI |
 
 `FRONTEND_ORIGIN` defaults to `http://localhost:5173` when absent. If Vite starts on a different port or hostname, update this setting and restart the backend. The frontend calls port 8080 directly; it has its own environment configuration.
 
 PostgreSQL data is stored in a Docker named volume and survives container restarts and `docker compose down`. Database name/user/password settings initialize a new volume; changing `.env` later does not change an existing database's credentials. Keep the original settings or explicitly update the database to match.
 
-JPA currently uses `ddl-auto=none`: it connects without creating or deleting tables. Versioned migrations will be introduced with the product data model.
+Flyway runs versioned SQL migrations from `src/main/resources/db/migration` when the application starts. JPA uses `ddl-auto=validate` to check the resulting schema rather than create or update tables itself.
+
+### Catalog data model
+
+The first migration, `V1__create_catalog_tables.sql`, adds four tables:
+
+| Table | Purpose |
+| --- | --- |
+| `categories` | Category name, image reference, visibility, and creation time |
+| `products` | Category reference, book name/description, author, decimal price, stock, visibility, and timestamps |
+| `product_images` | Up to five ordered image references per book |
+| `product_formats` | Available Paperback, Hardcover, E-book, and Audiobook formats |
+
+`Category` and `Product` are JPA entities in the `entity` folder. Images and formats use `@ElementCollection`, similar to the lab's image lists. Prices use `BigDecimal` and PostgreSQL `NUMERIC(10, 2)`. Database constraints reject negative prices/stock, unknown formats, and invalid image positions. Category deletion is blocked while products still reference it; deleting a product removes its own image/format rows.
+
+The author and formats replace the original JSON attributes with typed fields and a related table. Visibility and stock remain separate fields. Uploads are added in a later stage.
+
+### Public catalog API
+
+| Request | Response |
+| --- | --- |
+| `GET /api/products` | An array of visible books, ordered by ID; `[]` for an empty catalog |
+| `GET /api/products/{id}` | One visible book, or a ProblemDetail 404 when absent/hidden |
+
+Both routes require a visible category as well as a visible book. Out-of-stock books remain listed with `stockQuantity: 0`. Invalid or nonpositive IDs return 400. Search and pagination come in Stage 4.
+
+The lab-style flow is `ProductController` → `ProductService`/`ProductServiceImpl` → `ProductDao`/`ProductDaoImpl` → `ProductRepository`. The service maps entities to DTOs inside a read-only transaction, so lazy collections work with Open Session in View disabled. Responses include `id`, `name`, `description`, `price`, `author`, `stockQuantity`, a nested category (`id`, `name`, `imageUrl`), ordered `images`, and `formats` using the enum names. Internal visibility flags and persistence timestamps are not exposed.
+
+Image references such as `/images/products/fiction-01.png` are relative to the backend origin, not the frontend's origin. Local sample images require the `dev` profile.
+
+The first startup creates these tables in an empty application database and records the migration in `flyway_schema_history`. Later startups validate the migration history and only apply new versions. Keep applied migrations unchanged; add a new numbered migration for later schema changes. Existing databases with manually created catalog tables need an explicit migration plan rather than enabling Flyway baselining or dropping data automatically.
+
+### Development seed data
+
+`application-dev.properties` adds `classpath:dev/db/migration` to Flyway's normal migration location. Its `V2__seed_bookstore_catalog.sql` adapts only the original catalog: five categories, 60 books (12 per category), 60 cover references, and 180 available-format rows. Original book IDs, category IDs, titles, authors, descriptions, prices, stock, and visibility are preserved. PostgreSQL identity sequences are advanced so new records do not collide with the original IDs.
+
+The sample covers are copied unchanged into `src/main/resources/dev/static/images/products`. They are served as `/images/products/<filename>` only with the `dev` profile. The original SQL's five category JPG files were not present in the source project, so those optional category image values are `NULL`. Users, passwords, orders, and payment records from the old SQL are not imported.
+
+For local development, `.env.example` enables `SPRING_PROFILES_ACTIVE=dev`; the local `.env` prepared for this project does too. Start normally with `spring-boot:run` or IntelliJ. For an existing clone without this setting, add it to your own `.env` before starting. A temporary override is:
+
+```powershell
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"
+```
+
+Flyway applies the seed once. Restarts do not insert duplicates or reset later book edits. The seed expects an empty catalog; it will fail on conflicting IDs rather than overwrite existing data. Keep using the `dev` profile for a database initialized this way. Switching that same database to a profile that cannot see its applied development migration causes Flyway validation to fail. Production and hosted CI use separate databases without the `dev` profile and run schema migrations only.
+
+Future shared schema migrations stay under `db/migration`, with new versions such as `V3__...`; keep the version numbers unique across both migration folders.
 
 ## Tests and build
 
-Start PostgreSQL before running all tests, because the generated application-context test connects to the real local database:
+Start PostgreSQL before running all tests, because the application-context and catalog persistence tests connect to the real local database:
 
 ```powershell
 docker compose up -d --wait
@@ -62,6 +109,12 @@ The web tests can run separately without PostgreSQL:
 ```
 
 They check request validation, malformed/missing JSON, missing routes, unsupported methods/content types, unexpected errors, and allowed/rejected CORS origins, methods, and headers. They also verify changing the allowed origin and preserving CORS headers on error responses. Their example endpoints and mocked dependency only exist during tests.
+
+`CatalogPersistenceTests` verifies the migrated schema with PostgreSQL, entity/collection persistence, stock/visibility updates, database constraints, and repeat migration behavior. Its test data is rolled back after each test.
+
+`DevelopmentSeedTests` activates the development profile in a separate `development_seed_test` schema. It verifies the seed counts, original details, format/image references, identity sequences, and that a repeated migration does not reset edits. Temporary edits are rolled back, and these tests do not seed the application's normal schema when CI uses the default profile.
+
+`ProductCatalogTests` runs the real controller, service, DAO, and repository with MockMvc and PostgreSQL in a separate `catalog_api_test` schema. Test fixtures roll back after each test. It covers public DTOs and ordered collections, list/detail success, missing/invalid IDs, book/category visibility, out-of-stock books, optional fields, empty results, and CORS. `ProductControllerFailureTests` simulates service failures and checks safe 500 responses. Hosted CI runs all of these through the existing Maven job.
 
 ### JUnit, Mockito, and coverage
 
@@ -80,7 +133,7 @@ Run `clean verify` for a fresh build, all tests, and coverage reports. `test` ru
 
 Reports stay under the Git-ignored `target` folder. No production classes are excluded and no Maven coverage threshold is imposed. The local SonarQube analysis below checks the selected server-side quality gate.
 
-JaCoCo reports bytecode instruction, line, and branch coverage; its instruction counter is not a Java source statement counter. The current production classes have no conditional branches, so branch coverage is not applicable until business conditions are implemented. Do not report this as 100% branch coverage. This foundation report is only a baseline for the small amount of code currently implemented.
+JaCoCo reports bytecode instruction, line, and branch coverage; its instruction counter is not a Java source statement counter. If a report has no branch counter, report branch coverage as not applicable rather than 100%. Coverage at this stage only describes the implemented foundation and catalog model, not the future bookstore workflows.
 
 References: [JaCoCo Maven plugin](https://www.jacoco.org/jacoco/trunk/doc/maven.html), [JaCoCo counters](https://www.jacoco.org/jacoco/trunk/doc/counters.html), and [Mockito Java 21 agent setup](https://javadoc.io/static/org.mockito/mockito-core/5.23.0/org.mockito/org/mockito/Mockito.html#0.3).
 
